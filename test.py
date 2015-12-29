@@ -4,6 +4,7 @@ import asyncio
 from asyncio import ensure_future
 from functools import partial
 import logging
+from warnings import warn
 
 from consul.aio import Consul
 
@@ -16,14 +17,37 @@ class ConsulListener:
 		self.loop = loop
 		self.consul = Consul("devint-consul-xv-01.xv.dc.openx.org", consistency = 'stale', loop = loop)
 		self.services = ['riak-suanpan', 'openx-app.broker']
+		self.tasks = {}
 
-	def run(self, services):
-		self.tasks = {
-			service: ensure_future(self._monitor(service), loop = self.loop)
-				for service in services
-		}
+	def start(self):
+		if 'listener' in self.tasks:
+			if self.tasks['listener'].done():
+				log.warning("listener was not running, restarting")
+			else:
+				warn("listener is already running", RuntimeWarning)
+				return
+
+		if len(self.services) == 0:
+			log.error("No services configured to monitor")
+			return
+
+		service = self.services[0]
+		self.tasks['listener'] = ensure_future(self._monitor(service), loop = self.loop)
+
+	def wait(self):
+		if 'listener' not in self.tasks:
+			warn("issued wait, but there is no listener task", RuntimeWarning)
+			return
 
 		self.loop.run_until_complete(asyncio.wait(self.tasks.values()))
+
+	def stop(self):
+		if 'listener' not in self.tasks:
+			warn("issued stop, but there is no listener task", RuntimeWarning)
+			return
+
+		self.tasks['listener'].cancel()
+		del self.tasks['listener']
 
 	async def _monitor(self, service):
 		log.debug("Starting monitoring of %s" % (service,))
@@ -72,5 +96,6 @@ if __name__ == '__main__':
 	loop = asyncio.get_event_loop()
 	loop.set_debug(False)
 	listener = ConsulListener(loop)
-	listener.run(listener.services)
+	listener.start()
+	listener.wait()
 	loop.close()

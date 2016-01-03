@@ -1,20 +1,20 @@
 import asyncio
-import functools
 import logging
 import signal
+from functools import partial
 
-from .consul import Consul
+from .consul import ConsulListener
 
 log = logging.getLogger(__name__)
 
 class Router:
 	def __init__(self):
 		self.loop = asyncio.get_event_loop()
-		self.consul = Consul(self.loop, {})
+		self.consul = ConsulListener(self.loop, {})
 
 	def start(self):
 		for signame in ('SIGINT', 'SIGTERM'):
-			self.loop.add_signal_handler(getattr(signal, signame), functools.partial(self._sig_handler, signame))
+			self.loop.add_signal_handler(getattr(signal, signame), partial(self._sig_handler, signame))
 
 		asyncio.ensure_future(self._event_loop())
 		self.loop.run_forever()

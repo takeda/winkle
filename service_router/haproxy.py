@@ -1,0 +1,2 @@
+class Haproxy:
+	pass

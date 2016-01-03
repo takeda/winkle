@@ -54,7 +54,12 @@ class ConsulListener:
 
 		index = None
 		while True:
-			i, response = await self._health_service(service, index)
+			try:
+				i, response = await self._health_service(service, index)
+			except CancelledError as e:
+				log.info("Got cancellation request; exiting")
+				raise
+
 			print("%s: got index %s" % (service, i))
 
 			if i == index:
@@ -66,16 +71,15 @@ class ConsulListener:
 
 	@async_ttl_cache(60)
 	async def _health_service(self, service, index = None):
-		print("Checking service", service)
 		index, response = await self.consul.health.service(service, index, '5s', passing = True)
-		print(service, "got response", index)
 
 		services = []
 		for node in response:
-			attrs, tags = [], []
+			attrs, tags = {}, []
 			for tag in node['Service']['Tags']:
 				if '=' in tag:
-					attrs.append(tuple(tag.split('=')))
+					key, value = tag.split('=')
+					attrs[key] = value
 				else:
 					tags.append(tag)
 

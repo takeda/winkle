@@ -48,6 +48,5 @@ def main():
 	callbacks = {
 		'update': update
 	}
-	#consul = Consul(loop, callbacks)
 	router = Router()
 	router.start()

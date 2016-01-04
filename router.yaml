@@ -1,0 +1,15 @@
+services:
+  riak_suanpan_pb:
+    default_servers:
+      -
+        name: "localhost"
+        host: 127.0.0.1
+        port: 1234
+    discovery:
+      method: "consul"
+      service: "riak-suanpan"
+    haproxy:
+      port: 3200
+      server_options: "check inter 10000 rise 3 fall 2"
+      frontend: "mode tcp"
+      backend: "mode tcp"

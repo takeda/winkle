@@ -8,7 +8,9 @@ from .consul import ConsulListener
 log = logging.getLogger(__name__)
 
 class Router:
-	def __init__(self):
+	def __init__(self, config):
+		self.config = config
+
 		self.loop = asyncio.get_event_loop()
 		self.consul = ConsulListener(self.loop, {})
 

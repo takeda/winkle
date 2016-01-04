@@ -1,6 +1,7 @@
 import logging.config
 
 import click
+from yamlcfg import YamlConfig
 
 from .router import Router
 
@@ -13,6 +14,8 @@ def update(services):
 
 @click.command()
 def main():
+	config = YamlConfig("router.yaml")
+
 	# Configure logging
 	log_config = {
 		'version': 1,
@@ -48,5 +51,5 @@ def main():
 	callbacks = {
 		'update': update
 	}
-	router = Router()
+	router = Router(config)
 	router.start()

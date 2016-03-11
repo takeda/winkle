@@ -11,9 +11,9 @@ from service_router.caching import async_ttl_cache
 log = logging.getLogger(__name__)
 
 class ConsulListener:
-	def __init__(self, loop):
+	def __init__(self):
 		self.loop = loop
-		self.consul = Consul("devint-consul-xv-01.xv.dc.openx.org", consistency = 'stale', loop = loop)
+		self.consul = Consul("devint-consul-xv-01.xv.dc.openx.org", consistency = 'stale')
 		self.services = ['riak-suanpan', 'openx-app.broker']
 		self.tasks = {}
 

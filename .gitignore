@@ -1,3 +1,6 @@
-/service_router.egg-info/
-/service_router/__pycache__/
+/.eggs/
+/.idea/
 /.py35/
+/service_router.egg-info/
+/services/data/
+__pycache__

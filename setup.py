@@ -12,6 +12,7 @@ setup(
 		]
 	},
 	packages = ['service_router'],
+	test_suite = 'tests',
 	author = 'Derek Kulinski',
 	author_email = 'takeda@takeda.tk'
 )

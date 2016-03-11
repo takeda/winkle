@@ -1,15 +1,40 @@
+sources:
+  consul:
+    hosts:
+      - 127.0.0.1:5800
+
+sinks:
+  haproxy:
+    file: haproxy.cfg
+    global:
+      - daemon
+    defaults:
+      - retries 3
+      - timeout connect 3s
+      - timeout client 10m
+      - timeout server 10m
+    services:
+      - riak-suanpan-pb
+      - riak-quality-pb
+
 services:
-  riak_suanpan_pb:
-    default_servers:
-      -
-        name: "localhost"
-        host: 127.0.0.1
-        port: 1234
+  riak-suanpan-pb:
     discovery:
-      method: "consul"
-      service: "riak-suanpan"
+      method: consul
+      service: riak-suanpan-pb
     haproxy:
       port: 3200
-      server_options: "check inter 10000 rise 3 fall 2"
-      frontend: "mode tcp"
-      backend: "mode tcp"
+      options:
+        - mode tcp
+        - balance leastconn
+      server_options: check inter 10000 rise 3 fall 2
+  riak-quality-http:
+    discovery:
+      method: consul
+      service: riak-suanpan-pb
+    haproxy:
+      port: 3201
+      options:
+        - mode http
+        - balance roundrobin
+      server_options: check inter 10s rise 3 fall 2

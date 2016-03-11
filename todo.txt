@@ -1,0 +1,7 @@
+- support for consul
+- support for mesos (ZK)
+- rack awareness
+- incremental changes to haproxy
+- templating support
+- adding services on demand (mesos)
+- support of consul across environments (mesos)

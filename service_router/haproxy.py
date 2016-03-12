@@ -1,16 +1,21 @@
+import logging
+from collections import defaultdict
 from io import StringIO
+from typing import Dict, List
+
+log = logging.getLogger(__name__)
 
 class HAProxy:
-	def __init__(self, config):
+	def __init__(self, config: dict):
 		self.hooks = None
 
-		self._config = config['sinks']['haproxy']
-		self._service_config = config['services']
+		self._config = config['sinks']['haproxy']  # type: Dict[str]
+		self._service_config = config['services']  # type: Dict[str, dict]
 
-	def set_hooks(self, hooks):
+	def set_hooks(self, hooks: dict) -> None:
 		self.hooks = hooks
 
-	def generate_config(self):
+	def generate_config(self) -> str:
 		cnf = StringIO()
 
 		cnf.write("global\n")
@@ -42,3 +47,12 @@ class HAProxy:
 				cnf.write("  server %s %s:%d %s\n" % (node['name'], node['address'], node['port'], service_config['server_options']))
 
 		return cnf.getvalue()
+
+	def services_needed(self) -> Dict[str, list]:
+		result = defaultdict(list)  # type: Dict[str, List[str]]
+
+		for service in self._config['services']:
+			discovery = self._service_config[service]['discovery']  # type: Dict[str, str]
+			result[discovery['method']].append(discovery['service'])
+
+		return result

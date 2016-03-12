@@ -29,6 +29,10 @@ class HAProxyTest(TestCase):
 			},
 			'services': {
 				'service-1': {
+					'discovery': {
+						'method': 'consul',
+						'service': 'consul-service-1'
+					},
 					'haproxy': {
 						'port': '1234',
 						'options': ['option 1', 'option 2'],
@@ -36,6 +40,10 @@ class HAProxyTest(TestCase):
 					}
 				},
 				'service-2': {
+					'discovery': {
+						'method': 'marathon',
+						'service': 'marathon-service-1'
+					},
 					'haproxy': {
 						'port': '4321',
 						'options': ['option 3', 'option 4'],
@@ -58,3 +66,7 @@ class HAProxyTest(TestCase):
 		got = self.haproxy.generate_config()
 
 		self.assertEqual(expected, got)
+
+	def test_services_needed(self):
+		got = self.haproxy.services_needed()
+		self.assertDictEqual({'consul': ['consul-service-1'], 'marathon': ['marathon-service-1']}, got)

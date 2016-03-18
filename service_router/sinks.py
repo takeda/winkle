@@ -11,4 +11,5 @@ class Sinks:
 
 		if source in services:
 			return services[source]
+
 		return []

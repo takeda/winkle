@@ -21,7 +21,8 @@ class Router:
 
 		self.sources.set_hooks(hooks)
 
-	def
+	def start(self):
+		self.sources.start()
 
 	# def start(self):
 	# 	for signame in ('SIGINT', 'SIGTERM'):

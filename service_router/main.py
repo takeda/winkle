@@ -5,13 +5,6 @@ from yamlcfg import YamlConfig
 
 from .router import Router
 
-from pprint import pprint as pp
-
-def update(services):
-	print("Change detected!")
-	pp(services)
-
-
 @click.command()
 def main():
 	config = YamlConfig("router.yaml")
@@ -48,8 +41,5 @@ def main():
 	logging.config.dictConfig(log_config)
 	log = logging.getLogger(__name__)
 
-	callbacks = {
-		'update': update
-	}
 	router = Router(config)
 	router.start()

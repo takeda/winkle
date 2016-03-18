@@ -1,19 +1,18 @@
 import logging
 from collections import defaultdict
 from io import StringIO
-from typing import Dict, List
+from typing import Any, Dict, List
+
+from .abstract import AbsSink
 
 log = logging.getLogger(__name__)
 
-class HAProxy:
-	def __init__(self, config: dict):
-		self.hooks = None
+class HAProxy(AbsSink):
+	def __init__(self, config: Dict[str, Any]):
+		super().__init__(config)
 
 		self._config = config['sinks']['haproxy']  # type: Dict[str]
 		self._service_config = config['services']  # type: Dict[str, dict]
-
-	def set_hooks(self, hooks: dict) -> None:
-		self.hooks = hooks
 
 	def generate_config(self) -> str:
 		cnf = StringIO()
@@ -43,12 +42,12 @@ class HAProxy:
 				cnf.write("  %s\n" % option)
 			cnf.write("\n")
 
-			for node in self.hooks['service_nodes'](service):
+			for node in self._hooks['service_nodes'](service):
 				cnf.write("  server %s %s:%d %s\n" % (node['name'], node['address'], node['port'], service_config['server_options']))
 
 		return cnf.getvalue()
 
-	def services_needed(self) -> Dict[str, list]:
+	def services_needed(self):
 		result = defaultdict(list)  # type: Dict[str, List[str]]
 
 		for service in self._config['services']:

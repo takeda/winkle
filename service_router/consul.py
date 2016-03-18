@@ -1,74 +1,73 @@
 import asyncio
 import logging
-from asyncio import ensure_future
-from functools import partial
-from typing import Any, Callable, Dict, List
+from asyncio import ensure_future, CancelledError
+from typing import Any, Dict
 from warnings import warn
 
 from consul.aio import Consul
 
-from service_router.caching import async_ttl_cache
+from .abstract import AbsSource
 
 log = logging.getLogger(__name__)
 
-class ConsulListener:
-	def __init__(self, config: Dict):
-		self.hooks = None
-		self.tasks = {}
+class ConsulListener(AbsSource):
+	def __init__(self, config: Dict[str, Any]):
+		super().__init__()
+
+		self._tasks = {}
 		self.services = []
 
 		self._config = config['sources']['consul']  # type: Dict[str, Any]
 		self._consul = Consul(self._config['host'], self._config['port'], consistency = self._config['consistency'])
 
-	def set_hooks(self, hooks: Dict[str, Callable]) -> None:
-		self.hooks = hooks
-		self.services = hooks['get_services']('consul')
-
 	def start(self) -> None:
-		if 'listener' in self.tasks:
-			if self.tasks['listener'].done():
+		if 'listener' in self._tasks:
+			if self._tasks['listener'].done():
 				log.warning("listener was not running, restarting")
 			else:
 				warn("listener is already running", RuntimeWarning)
 				return
 
+		self.services = self._hooks['get_services']('consul')
+
 		if len(self.services) == 0:
 			log.error("No services configured to monitor")
 			return
 
-		service = self.services[0]
-		self.tasks['listener'] = ensure_future(self._monitor(service))
+		self._tasks['listener'] = ensure_future(self._monitor())
 
 	def wait(self) -> None:
-		if 'listener' not in self.tasks:
+		if 'listener' not in self._tasks:
 			warn("issued wait, but there is no listener task", RuntimeWarning)
 			return
 
-		self.loop.run_until_complete(asyncio.wait(self.tasks.values()))
+		self.loop.run_until_complete(asyncio.wait(self._tasks.values()))
 
 	def stop(self) -> None:
-		if 'listener' not in self.tasks:
+		if 'listener' not in self._tasks:
 			warn("issued stop, but there is no listener task", RuntimeWarning)
 			return
 
-		self.tasks['listener'].cancel()
-		del self.tasks['listener']
+		self._tasks['listener'].cancel()
+		del self._tasks['listener']
 
-	async def _monitor(self, service: str) -> None:
+	async def _monitor(self) -> None:
+		service = self.services[0]
+
 		log.debug("Starting monitoring of %s" % (service,))
 
 		index = None
 		while True:
 			try:
 				i, response = await self._health_service(service, index)
-			except CancelledError as e:
+			except CancelledError:
 				log.info("Got cancellation request; exiting")
 				raise
 
 			print("%s: got index %s" % (service, i))
 
 			if i == index:
-				log.debug("%s - timeout" % (service,))
+				log.debug("%s - timeout; no change" % (service,))
 				continue
 
 			self.callback(response)

@@ -1,4 +1,5 @@
 import logging.config
+from typing import Any, Mapping
 
 import click
 from yamlcfg import YamlConfig
@@ -7,7 +8,7 @@ from .router import Router
 
 @click.command()
 def main():
-	config = YamlConfig("router.yaml")
+	config = YamlConfig("router.yaml")  # type: Mapping[str, Any]
 
 	# Configure logging
 	log_config = {
@@ -39,7 +40,8 @@ def main():
 		}
 	}
 	logging.config.dictConfig(log_config)
-	log = logging.getLogger(__name__)
+	log = logging.getLogger(__name__)  # type: logging.Logger
+	log.info("Starting service-router")
 
 	router = Router(config)
 	router.start()

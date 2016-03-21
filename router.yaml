@@ -1,7 +1,7 @@
 sources:
   consul:
     host: 127.0.0.1
-    port: 5800
+    port: 8500
     consistency: stale
 
 sinks:
@@ -16,7 +16,7 @@ sinks:
       - timeout server 10m
     services:
       - riak-suanpan-pb
-      - riak-quality-pb
+      - riak-quality-http
 
 services:
   riak-suanpan-pb:
@@ -32,7 +32,7 @@ services:
   riak-quality-http:
     discovery:
       method: consul
-      service: riak-suanpan-pb
+      service: riak-quality-http
     haproxy:
       port: 3201
       options:

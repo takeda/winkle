@@ -55,3 +55,6 @@ class HAProxy(AbsSink):
 			result[discovery['method']].append(discovery['service'])
 
 		return result
+
+	def process_update(self, changes):
+		raise NotImplemented()

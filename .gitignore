@@ -2,5 +2,5 @@
 /.idea/
 /.py35/
 /service_router.egg-info/
-/services/data/
+/services
 __pycache__

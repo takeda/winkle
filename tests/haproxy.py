@@ -2,26 +2,35 @@ from pathlib import Path
 from unittest import TestCase
 
 from service_router.haproxy import HAProxy
+from service_router.node import Node
 
 path = Path(__file__)
 
 def service_nodes(service):
 	return {
 		'service-1': [
-			{'name': 'node1', 'address': '1.1.1.1', 'port': 1234},
-			{'name': 'node2', 'address': '2.2.2.2', 'port': 1234}
+			Node('1.1.1.1', '1234', 'node1', None, None),
+			Node('2.2.2.2', '1234', 'node2', None, None)
 		],
 		'service-2': [
-			{'name': 'node3', 'address': '3.3.3.3', 'port': 4321},
-			{'name': 'node4', 'address': '4.4.4.4', 'port': 4321}
+			Node('3.3.3.3', '4321', 'node3', None, None),
+			Node('4.4.4.4', '4321', 'node4', None, None)
 		]
 	}[service]
 
 class HAProxyTest(TestCase):
 	def setUp(self):
+		self.maxDiff = None
+
 		config = {
 			'sinks': {
 				'haproxy': {
+					'service': {
+						'config': 'haproxy.cfg',
+						'checkcfg': 'haproxy -c -f {file}',
+						'start': 'service haproxy start',
+						'reload': 'service haproxy reload'
+					},
 					'global': ['global setting 1', 'global setting 2'],
 					'defaults': ['aa', 'bb', 'cc'],
 					'services': ['service-1', 'service-2']
@@ -63,10 +72,10 @@ class HAProxyTest(TestCase):
 	def test_config_generation(self):
 		with path.with_name('haproxy.cfg').open() as f:
 			expected = f.read()
-		got = self.haproxy.generate_config()
+		got = self.haproxy._generate_config()
 
 		self.assertEqual(expected, got)
 
 	def test_services_needed(self):
-		got = self.haproxy.services_needed()
+		got = self.haproxy.services_needed
 		self.assertDictEqual({'consul': ['consul-service-1'], 'marathon': ['marathon-service-1']}, got)

@@ -9,33 +9,30 @@ log = logging.getLogger(__name__)
 
 def async_cache(cache):
 	def decorator(func):
-		log.debug("Hello!")
 		lock = asyncio.Lock()
 
-		try: indexpos = func.__code__.co_varnames.index('index')
-		except ValueError: indexpos = None
+		try:
+			indexpos = func.__code__.co_varnames.index('index')
+		except ValueError:
+			indexpos = None
 
 		async def wrapper(*args, **kwargs):
 			k = cachetools.hashkey(*args, **kwargs)
 
-			from_cache = False if 'index' in kwargs or (indexpos and indexpos < len(args) and args[indexpos]) else True
-
 			if not ('index' in kwargs or (indexpos and indexpos < len(args) and args[indexpos])):
-				log.debug("Trying to use cache")
 				try:
 					async with lock:
 						return cache[k]
 				except KeyError:
-					pass # not in cache
+					log.debug("Cache miss; requesting data")
 
-			log.debug("Fetching data")
 			v = await func(*args, **kwargs)
 
 			try:
 				async with lock:
 					cache[k] = v
 			except ValueError:
-				pass # value too large
+				pass  # value too large
 
 			return v
 

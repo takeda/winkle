@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
 	name = 'service-router',
 	version = '0.1',
-	install_requires = ['click', 'python-consul[asyncio]', 'cachetools'],
+	install_requires = ['click ~= 6.6', 'aiohttp ~= 0.21.5', 'cachetools ~= 1.1.6', 'yamlcfg ~= 0.5.3'],
 	entry_points = {
 		'console_scripts': [
 			'service-router = service_router.main:main'

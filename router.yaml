@@ -1,3 +1,7 @@
+program:
+  services-config: services.yaml
+  rack: ae-d
+  
 sources:
   consul:
     host: 127.0.0.1
@@ -6,36 +10,28 @@ sources:
 
 sinks:
   haproxy:
-    file: haproxy.cfg
+    service:
+      config: services/haproxy.cfg
+      pid-file: services/haproxy.pid
+      check-config: services/haproxy -c -f {config}
+      start: services/haproxy -D -f {config} -p {pidfile}
+      reload: services/haproxy -D -f {config} -p {pidfile} -sf $(cat {pidfile})
+      socket: /tmp/haproxy.sock
+      state-file: services/haproxy.state
     global:
-      - daemon
+      - stats socket /tmp/haproxy.sock mode 660 level admin
+      - server-state-file services/haproxy.state
     defaults:
       - retries 3
       - timeout connect 3s
       - timeout client 10m
       - timeout server 10m
+      - load-server-state-from-file global
     services:
-      - riak-suanpan-pb
+      - riak-suanpan-pb:
+          minimum: 2
+          rack_aware: True
       - riak-quality-http
-
-services:
-  riak-suanpan-pb:
-    discovery:
-      method: consul
-      service: riak-suanpan-pb
-    haproxy:
-      port: 3200
-      options:
-        - mode tcp
-        - balance leastconn
-      server_options: check inter 10000 rise 3 fall 2
-  riak-quality-http:
-    discovery:
-      method: consul
-      service: riak-quality-http
-    haproxy:
-      port: 3201
-      options:
-        - mode http
-        - balance roundrobin
-      server_options: check inter 10s rise 3 fall 2
+      - ads-thrift:
+          minimum: 2
+      - gateway-http

@@ -2,46 +2,35 @@ import logging.config
 from typing import Any, Mapping
 
 import click
-from yamlcfg import YamlConfig
+import yamlcfg
 
-from .router import Router
+from service_router import daemon, defaults
+from service_router.router import Router
 
 @click.command()
-def main():
-	config = YamlConfig("router.yaml")  # type: Mapping[str, Any]
+@click.option('--foreground/--background', '-f', default=False, help='Run in foreground and log to console')
+@click.option('--config', '-c', type=str, default='router.yaml', help='Configuration file')
+@click.option('--pid-file', '-p', type=str, default='router.pid', help='PID file')
+@click.version_option()
+def main(foreground, config, pid_file):
+	yamlconfig = yamlcfg.YamlConfig(config)  # type: Mapping[str, Any]
 
-	# Configure logging
-	log_config = {
-		'version': 1,
-		'formatters': {
-			'simple': {'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'}
-		},
-		'handlers': {
-			'console': {
-				'class': 'logging.StreamHandler',
-				'formatter': 'simple',
-				'stream': 'ext://sys.stdout'
-			}
-#			'file': {
-#				'class': 'logging.handlers.TimedRotatingFileHandler',
-#				'formatter': 'simple',
-#				'filename': arguments['--log'],
-#				'when': 'midnight',
-#				'backupCount': 14,
-#				'delay': True
-#			}
-		},
-		'root': {
-			'level': 'DEBUG',
-			'handlers': ['console']
-		},
-		'loggers': {
-			'service_router': {}
-		}
-	}
-	logging.config.dictConfig(log_config)
+	if not foreground:
+		defaults.log_config['root']['handlers'] = ['simplefile']
+
+	logging.config.dictConfig(defaults.log_config)
 	log = logging.getLogger(__name__)  # type: logging.Logger
-	log.info("Starting service-router")
 
-	router = Router(config)
+	if foreground:
+		run(log, yamlconfig)
+	else:
+		daemon.daemonize(pid_file, run, log, yamlconfig)
+
+def run(log: logging.Logger, yamlconfig: Mapping[str, Any]):
+	log.info("Starting service-router by Derek Kulinski <derek.kulinski@openx.com>")
+
+	router = Router(yamlconfig)
 	router.start()
+
+if __name__ == '__main__':
+	main()

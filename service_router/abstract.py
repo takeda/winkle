@@ -6,6 +6,7 @@ T_SERVICES = Dict[str, List[str]]
 class AbsSourceSink(metaclass=ABCMeta):
 	def __init__(self, config: Mapping[str, Any]):
 		self._hooks = None
+		self._initialized = False
 
 	def set_hooks(self, hooks: Mapping[str, Callable]):
 		self._hooks = hooks

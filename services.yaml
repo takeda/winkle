@@ -7,7 +7,7 @@ riak-suanpan-pb:
       - bind *:3200
       - mode tcp
       - balance leastconn
-    server_options: check inter 10000 rise 3 fall 2
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4
 
 riak-quality-http:
   discovery:
@@ -18,7 +18,7 @@ riak-quality-http:
       - bind *:3201
       - mode http
       - balance roundrobin
-    server_options: check inter 10s rise 3 fall 2
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7
 
 ads-thrift:
   discovery:
@@ -29,7 +29,7 @@ ads-thrift:
       - bind *:3202
       - mode tcp
       - balance leastconn
-    server_options: check inter 10000 rise 3 fall 2
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4
 
 gateway-http:
   discovery:
@@ -40,4 +40,4 @@ gateway-http:
       - bind *:3203
       - mode http
       - balance roundrobin
-    server_options: check inter 10s rise 3 fall 2
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7

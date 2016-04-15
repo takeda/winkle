@@ -14,6 +14,12 @@ class Sinks:
 		self._hooks = hooks
 		self.haproxy.set_hooks(hooks)
 
+	def start(self):
+		self.haproxy.start()
+
+	def stop(self):
+		pass
+
 	def services_needed(self, source: str) -> List[str]:
 		"""Returns list of services for given source
 		:param source name of the source (ex. consul)

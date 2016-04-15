@@ -54,6 +54,9 @@ class ConsulListener(AbsSource):
 			self._listener_task = threading.Thread(target=monitor_thread, name='consul-monitor', daemon=True)
 			self._listener_task.start()
 
+	def stop(self):
+		raise NotImplementedError()
+
 	async def _monitor(self) -> None:
 		self._local.state = {}
 

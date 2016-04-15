@@ -4,10 +4,11 @@ import logging
 import signal
 import threading
 from contextlib import closing
-from typing import Any, Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple, Callable, List, Dict
 
 import yamlcfg
 
+from service_router.errors import ConfigError
 from .sources import Sources
 from .sinks import Sinks
 
@@ -20,9 +21,7 @@ class Router:
 		self._loop = None            # type: Optional[asyncio.BaseEventLoop]
 		self.__control_lock = threading.Lock()
 
-		# Handling of service mapping
-		self._services_config = yamlcfg.YamlConfig(self._config['program']['services-config'])  # type: Mapping[str, Any]
-		self._service2source = self._compute_service_maps()  # type: Mapping[str, Tuple[str, str]]
+		self._services_config = yamlcfg.YamlConfig(self._config['program']['services-config'])._data  # type: Dict[str, Any]
 
 		self.sources = Sources(config)
 		self.sinks = Sinks(config, self._services_config)
@@ -35,12 +34,22 @@ class Router:
 		}
 		sink_hooks = {
 			'service_nodes': self.sources.service_nodes,    # obtain list of healthy nodes for canonical service
-			'run_main_thread': self.run_main_thread         # schedule task execution in main thread
+			'run_main_thread': self.run_main_thread,        # schedule task execution in main thread
+			'service2source': self.service2source           # convert canonical service name to (source, service) tuple
 		}
 		self.sources.set_hooks(src_hooks)
 		self.sinks.set_hooks(sink_hooks)
 
+		self._setup()
+
+	def _setup(self) -> None:
+		# Generating canonical service -> (source, service) tuple
+		self._service2source = {}
+		for service_name, value in self._services_config.items():
+			self._service2source[service_name] = (value['discovery']['method'], value['discovery']['service'])
+
 	def start(self):
+		self.sinks.start()
 		self.sources.start()
 		with closing(asyncio.new_event_loop()) as loop:
 			asyncio.set_event_loop(loop)
@@ -57,14 +66,17 @@ class Router:
 
 			loop.run_forever()
 
-	def _compute_service_maps(self) -> Mapping[str, Tuple[str, str]]:
-		# noinspection PyProtectedMember
-		return {
-			service_name: (data['discovery']['method'], data['discovery']['service'])
-				for service_name, data in self._services_config._data.items()
-		}
+		self.sources.stop()
+		self.sinks.stop()
 
-	def run_main_thread(self, task, *args, **kwargs):
+	def run_main_thread(self, task: Callable[[], Any], *args: List[Any], **kwargs: Dict[str, Any]):
+		"""
+		Run function in main thread and returns Future.
+		:param task: function to call
+		:param args: arguments to the function
+		:param kwargs: keyword arguments to the function
+		:return: future containing the result
+		"""
 		assert self._loop is not None
 
 		async def coroutine():
@@ -78,4 +90,9 @@ class Router:
 			return asyncio.run_coroutine_threadsafe(coroutine(), self._loop)
 
 	def service2source(self, service: str) -> Tuple[str, str]:
+		"""
+		Convert canonical service name to (source, service) tuple.
+		:param service: name of the service
+		:return: source, service tuple
+		"""
 		return self._service2source[service]

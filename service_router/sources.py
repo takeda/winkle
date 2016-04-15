@@ -15,10 +15,12 @@ class Sources:
 	def start(self):
 		self.consul.start()
 
+	def stop(self):
+		pass
+
 	def service_nodes(self, service_name: str) -> List[Node]:
 		source, service = self._hooks['service2source'](service_name)
 		if source == 'consul':
 			return self.consul.service_nodes(service)
 
-		# TODO: Better error handling
 		raise NotImplemented()

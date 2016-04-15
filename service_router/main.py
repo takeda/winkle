@@ -13,7 +13,7 @@ from service_router.router import Router
 @click.option('--pid-file', '-p', type=str, default='router.pid', help='PID file')
 @click.version_option()
 def main(foreground, config, pid_file):
-	yamlconfig = yamlcfg.YamlConfig(config)  # type: Mapping[str, Any]
+	yamlconfig = yamlcfg.YamlConfig(config)._data  # type: Mapping[str, Any]
 
 	if not foreground:
 		defaults.log_config['root']['handlers'] = ['simplefile']

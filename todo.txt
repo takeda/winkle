@@ -5,7 +5,7 @@
 [x] running in background
 [x] randomize entries
 [ ] support for mesos (ZK)
-[ ] rack awareness
+[x] rack awareness
 [ ] incremental changes to haproxy
 [ ] templating support?
 [ ] adding services on demand (mesos)
@@ -13,3 +13,4 @@
 [ ] disable haproxy when service-router is down
 [ ] detection of minimum nodes expected per service
 [ ] maximum-minimum time to wait before reloading config
+[ ] ability to direct traffic from different datacenter

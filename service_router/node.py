@@ -36,8 +36,14 @@ class NodeAddr:
 	def __repr__(self):
 		return self.node.__repr__()
 
-sorting_salt = socket.getfqdn()
+sorting_salt = socket.getfqdn().encode('us-ascii', 'ignore')
 
 def node_random_sort_key(node: Node) -> str:
+	global sorting_salt
+
 	# md5 is fast and evenly distributed, collision weakness has no impact in this use case
-	return hashlib.md5(('%s|%s|%s' % (sorting_salt, node[0], node[1])).encode('us-ascii', 'ignore')).hexdigest()
+	hash = hashlib.md5()
+	hash.update(sorting_salt)
+	hash.update(('%s:%s' % (node[0], node[1])).encode('us-ascii', 'ignore'))
+
+	return hash.hexdigest()

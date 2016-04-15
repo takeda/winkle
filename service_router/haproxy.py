@@ -49,9 +49,7 @@ class HAProxy(AbsSink):
 					'minimum': 0
 			}
 
-			if isinstance(service_name, str):
-				self._services[service_name] = defaults
-			elif isinstance(service_name, dict):
+			if isinstance(service_name, dict):
 				if len(service_name) != 1:
 					raise ConfigError('Dictionary needs to have only one element (perhaps you forgot'
 					                  'a minus sign in yaml config?)')
@@ -59,6 +57,8 @@ class HAProxy(AbsSink):
 				name = list(service_name)[0]
 				self._services[name] = defaults
 				self._services[name].update(service_name[name])
+			else:
+				self._services[service_name] = defaults
 
 	def start(self) -> None:
 		for service_name in self._services:

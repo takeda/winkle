@@ -8,7 +8,6 @@ from typing import Any, Mapping, Optional, Tuple, Callable, List, Dict
 
 import yamlcfg
 
-from service_router.errors import ConfigError
 from .sources import Sources
 from .sinks import Sinks
 
@@ -40,17 +39,18 @@ class Router:
 		self.sources.set_hooks(src_hooks)
 		self.sinks.set_hooks(sink_hooks)
 
+		self._service2source = {}  # type: Dict[str, Tuple[str, str]]
 		self._setup()
 
 	def _setup(self) -> None:
 		# Generating canonical service -> (source, service) tuple
-		self._service2source = {}
 		for service_name, value in self._services_config.items():
 			self._service2source[service_name] = (value['discovery']['method'], value['discovery']['service'])
 
-	def start(self):
+	def run(self) -> None:
 		self.sinks.start()
 		self.sources.start()
+
 		with closing(asyncio.new_event_loop()) as loop:
 			asyncio.set_event_loop(loop)
 

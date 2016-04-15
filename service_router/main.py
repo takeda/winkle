@@ -30,7 +30,8 @@ def run(log: logging.Logger, yamlconfig: Mapping[str, Any]):
 	log.info("Starting service-router by Derek Kulinski <derek.kulinski@openx.com>")
 
 	router = Router(yamlconfig)
-	router.start()
+	router.run()
 
+main()
 if __name__ == '__main__':
-	main()
+	pass

@@ -1,3 +1,0 @@
-#! /bin/sh -x
-
-consul agent -data-dir data -join devint-consul-xv-01 -dc xv-devint

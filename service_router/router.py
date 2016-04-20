@@ -20,6 +20,7 @@ class Router:
 		self._loop = None            # type: Optional[asyncio.BaseEventLoop]
 		self.__control_lock = threading.Lock()
 
+		# noinspection PyProtectedMember
 		self._services_config = yamlcfg.YamlConfig(self._config['program']['services-config'])._data  # type: Dict[str, Any]
 
 		self.sources = Sources(config)

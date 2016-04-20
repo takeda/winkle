@@ -1,13 +1,13 @@
 [x] support for consul
 [x] support for haproxy
 [x] saving haproxy state before reloading
-[ ] optimize haproxy configuration
+[x] optimize haproxy configuration
 [x] running in background
 [x] randomize entries
 [ ] support for mesos (ZK)
 [x] rack awareness
-[ ] incremental changes to haproxy
-[ ] templating support?
+[x] incremental changes to haproxy
+[ ] template support?
 [ ] adding services on demand (mesos)
 [ ] support of consul across environments (mesos)
 [ ] disable haproxy when service-router is down

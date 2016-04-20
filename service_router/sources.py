@@ -1,7 +1,7 @@
 from typing import Any, Callable, List, Mapping
 
 from .consul_listener import ConsulListener
-from .node import Node
+from .types import Node
 
 class Sources:
 	def __init__(self, config: Mapping[str, Any]):

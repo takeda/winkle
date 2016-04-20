@@ -35,3 +35,5 @@ sinks:
       - ads-thrift:
           rack_aware: True
           minimum: 2
+      - frequency-thrift:
+          rack_aware: True

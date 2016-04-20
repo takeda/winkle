@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest import TestCase
 
 from service_router.haproxy import HAProxy
-from service_router.node import Node
+from service_router.types import Node
 
 path = Path(__file__)
 

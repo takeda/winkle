@@ -6,7 +6,7 @@ from typing import Any, Dict, Mapping
 from .abstract import AbsSink, T_SERVICES
 from .errors import ConfigError
 from .haproxy_comm import HAProxyComm
-from .node import node_random_sort_key
+from .types import node_random_sort_key, T_CHANGES
 from .service_updater import ServiceUpdater
 
 T_SERVICES_CONFIG = Dict[str, Dict[str, Any]]
@@ -45,8 +45,8 @@ class HAProxy(AbsSink):
 		# Generate list of canonical services with configuration
 		for service_name in self._config['services']:
 			defaults = {
-					'rack_aware': False,
-					'minimum': 0
+				'rack_aware': False,
+				'minimum': 0
 			}
 
 			if isinstance(service_name, dict):
@@ -115,19 +115,66 @@ class HAProxy(AbsSink):
 
 		return self._monitored_services
 
-	def process_update(self, source, added, removed, updated):
+	def process_update(self, source: str, changes: T_CHANGES) -> None:
 		assert self._initialized
+
+		backends = self._comm.get_backends()
+
+		reload = False
+		disable = defaultdict(list)
+		for backend, change in changes.items():
+			log.debug("Changes for %s: %r", backend, change)
+
+			if len(change.updated) > 0:
+				log.debug('We have updates for %s; forcing reload', backend)
+				reload = True
+
+			if backend not in backends:
+				log.debug('%s is new; forcing reload', backend)
+				reload = True
+				continue
+
+			state = self._comm.get_servers_state(backend)
+
+			for server in change.added:
+				if server.name not in state:
+					log.debug('%s is new; forcing reload', server.name)
+					reload = True
+					continue
+
+				if self._comm.is_server_disabled(backend, server.name, state):
+					log.info('enabling %s/%s', backend, server.name)
+					self._comm.enable_server(backend, server.name)
+
+			# No need to disable if we are reloading anyway
+			if reload:
+				continue
+
+			for server in change.removed:
+				if server.name not in state:
+					log.warning("%s/%s is being removed but haproxy doesn't recognize it", backend, server.name)
+					continue
+
+				if self._comm.is_server_disabled(backend, server.name, state):
+					log.warning("%s/%s is being removed but haproxy doesn't recognize it", backend, server.name)
+					continue
+
+				disable[backend].append(server.name)
 
 		log.debug("Generating config")
 		new_config = self._generate_config()
-		log.debug("Finished generating config")
 		if not self._service_updater.needs_update(new_config):
 			log.info("No change in config, skipping")
 			return
 
-		log.info("Writing config")
 		self._service_updater.update_config(new_config)
-		log.info("Writing state file")
-		self._comm.save_state(self._state_file)
-		log.info("Finished writing config")
-		self._service_updater.reload_config()
+
+		if not reload:
+			for backend, servers in disable.items():
+				for server in servers:
+					log.info('disabling %s/%s', backend, server)
+					self._comm.disable_server(backend, server)
+		else:
+			log.info("Writing state file to %s", self._state_file)
+			self._comm.save_state(self._state_file)
+			self._service_updater.reload_config()

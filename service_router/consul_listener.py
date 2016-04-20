@@ -3,14 +3,14 @@ import logging
 import threading
 from asyncio import CancelledError
 from contextlib import closing
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Tuple, NamedTuple
 from warnings import warn
 
 from service_router.errors import ConnectionError, HTTPResponseError
 from .abstract import AbsSource
 from .caching import async_ttl_cache
 from .consul import Consul
-from .node import Node, NodeAddr
+from .types import Node, NodeAddr, T_CHANGES, Changes
 from .utils import hashabledict
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class ConsulListener(AbsSource):
 			return
 
 		service = services[0]
-		log.debug("Starting monitoring of %s" % (service,))
+		log.debug("Starting monitoring of %s", service)
 
 		self._local.consul = self._consul(self._config['host'], self._config['port'],
 			consistency=self._config['consistency'])
@@ -83,22 +83,24 @@ class ConsulListener(AbsSource):
 			log.debug("%s: got index %s" % (service, i))
 
 			if i == index:
-				log.debug("%s - timeout; no change" % (service,))
+				log.debug("%s - timeout; no change", service)
 				continue
 
-			await self._detect_changes(services, i)
+			changes = await self._calculate_changes(services, i)
+			self._hooks['change_detected']('consul', changes)
+
 			index = i
 
 		self._local.consul.close()
 
 	@classmethod
-	@async_ttl_cache(60)
+	# @async_ttl_cache(60)
 	async def _health_service(cls, service: str, index: Optional[str] = None) -> Tuple[str, str, List[Node]]:
 		while True:
 			try:
 				index, response = await cls._local.consul.health.service(service, index, '5m', passing=True)
 			except (ConnectionError, HTTPResponseError) as e:
-				log.error('Received an error when querying consul: %s', e)
+				log.error('Received an error when querying consul: %r', e)
 			except Exception:
 				log.exception("Got an unknown exception when pulling information from consul")
 			else:
@@ -119,13 +121,14 @@ class ConsulListener(AbsSource):
 					else:
 						tags.append(tag)
 
-			nodes.append(Node(node['Service']['Address'], node['Service']['Port'],
-			                  '%s_%s' % (node['Node']['Node'], node['Service']['Port']), attrs, tuple(tags)))
+			node_name = '%s' % node['Node']['Node'].split('.')[0]
+
+			nodes.append(Node(node['Service']['Address'], node['Service']['Port'], node_name, attrs, frozenset(tags)))
 
 		return index, service, nodes
 
 	@classmethod
-	async def _get_new_state(cls, services: List[str], index: Optional[str] = None) -> Dict[str, List[Node]]:
+	async def _get_new_state(cls, services: List[str], index: str = None) -> Dict[str, List[Node]]:
 		# schedule tasks
 		futures = [asyncio.ensure_future(cls._health_service(service, index)) for service in services]
 
@@ -137,26 +140,34 @@ class ConsulListener(AbsSource):
 
 		return results
 
-	async def _detect_changes(self, services: List[str], index: str):
-		log.debug("Detected change %s" % index)
+	async def _calculate_changes(self, services: List[str], index: str) -> T_CHANGES:
+		log.debug("Calculating differences in consul change #%s", index)
 
 		old_state = self._local.state
 		new_state = await self._get_new_state(services)
 
-		added, removed = {}, {}
+		# Calculate differences
+		changes = {}
 		for service in services:
-			log.debug("Processing service %s", service)
+			log.debug("Fetching health of service %s", service)
 
-			old_nodes = old_state[service] if service in old_state else []
-			new_nodes = new_state[service] if service in new_state else []
+			# get nodes for given service
+			old_nodes = set(old_state.get(service, []))
+			new_nodes = set(new_state.get(service, []))
 
+			# list of nodes comparable by address/port
 			old_addrs = set(map(NodeAddr, old_nodes))
 			new_addrs = set(map(NodeAddr, new_nodes))
-			added[service] = [x.node for x in new_addrs - old_addrs]
-			removed[service] = [x.node for x in old_addrs - new_addrs]
+
+			added = frozenset(x.node for x in new_addrs - old_addrs)
+			removed = frozenset(x.node for x in old_addrs - new_addrs)
+			updated = frozenset(new_nodes - old_nodes - added)
+
+			changes[service] = Changes(added, removed, updated)
 
 		self._local.state = new_state
-		self._hooks['change_detected']('consul', added, removed, [])
+
+		return changes
 
 	# thread safe interface
 	def service_nodes(self, service: str, timeout: Optional[int] = 5) -> List[Node]:

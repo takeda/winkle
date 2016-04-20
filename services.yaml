@@ -41,3 +41,14 @@ gateway-http:
       - mode http
       - balance roundrobin
     server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7
+
+frequency-thrift:
+  discovery:
+    method: consul
+    service: frequency-thrift
+  haproxy:
+    options:
+      - bind *:3204
+      - mode tcp
+      - balance leastconn
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4

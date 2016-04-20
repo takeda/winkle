@@ -2,6 +2,7 @@ import logging
 from typing import Any, Callable, List, Optional, Mapping
 
 from .haproxy import HAProxy
+from .types import T_CHANGES
 
 log = logging.getLogger(__name__)
 
@@ -29,9 +30,9 @@ class Sinks:
 
 		return services.get(source, [])
 
-	def change_detected(self, source, added, removed, updated):
+	def change_detected(self, source: str, changes: T_CHANGES) -> None:
 		def process_change():
-			log.debug("Got change from %s", source)
-			self.haproxy.process_update(source, added, removed, updated)
+			log.debug("Got update from %s", source)
+			self.haproxy.process_update(source, changes)
 
 		self._hooks['run_main_thread'](process_change)

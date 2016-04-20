@@ -13,6 +13,7 @@ from service_router.router import Router
 @click.option('--pid-file', '-p', type=str, default='router.pid', help='PID file')
 @click.version_option()
 def main(foreground, config, pid_file):
+	# noinspection PyProtectedMember
 	yamlconfig = yamlcfg.YamlConfig(config)._data  # type: Mapping[str, Any]
 
 	if not foreground:

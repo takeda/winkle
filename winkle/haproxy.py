@@ -26,6 +26,8 @@ STATS_CONFIG = [
 
 
 class HAProxy(AbsSink):
+	_sorting_key = node_random_sort_key
+
 	def __init__(self, config: Mapping[str, Any], services: Mapping[str, Any]):
 		super().__init__(config)
 
@@ -45,7 +47,7 @@ class HAProxy(AbsSink):
 		# Generate list of canonical services with configuration
 		for service_name in self._config['services']:
 			defaults = {
-				'rack_aware': False,
+				'rack-aware': False,
 				'minimum': 0
 			}
 
@@ -92,8 +94,8 @@ class HAProxy(AbsSink):
 			cnf.write("\n")
 
 			nodes = []
-			for node in sorted(self._hooks['service_nodes'](service), key=node_random_sort_key):
-				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack_aware'] else True
+			for node in sorted(self._hooks['service_nodes'](service), key=self._sorting_key):
+				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
 
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],

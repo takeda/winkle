@@ -4,7 +4,7 @@ import socket
 from contextlib import closing
 from typing import List, Dict, Any
 
-from service_router.haproxy_comm_enums import ServerState, ServerAdmin, CheckStatus, CheckResult, CheckState
+from .haproxy_comm_enums import ServerState, ServerAdmin, CheckStatus, CheckResult, CheckState
 
 csv.register_dialect('haproxy', delimiter=' ', quoting=csv.QUOTE_NONE)
 

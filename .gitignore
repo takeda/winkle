@@ -1,6 +1,5 @@
-/.eggs/
 /.idea/
 /.py35/
-/service_router.egg-info/
 /services
+/winkle.egg-info/
 __pycache__

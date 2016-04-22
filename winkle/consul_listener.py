@@ -3,13 +3,13 @@ import logging
 import threading
 from asyncio import CancelledError
 from contextlib import closing
-from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Tuple, NamedTuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 from warnings import warn
 
-from service_router.errors import ConnectionError, HTTPResponseError
 from .abstract import AbsSource
 from .caching import async_ttl_cache
 from .consul import Consul
+from .errors import ConnectionError, HTTPResponseError
 from .types import Node, NodeAddr, T_CHANGES, Changes
 from .utils import hashabledict
 
@@ -36,7 +36,7 @@ class ConsulListener(AbsSource):
 
 			with closing(asyncio.new_event_loop()) as loop:  # type: asyncio.BaseEventLoop
 				asyncio.set_event_loop(loop)
-				loop.set_debug(True)
+				# loop.set_debug(True)
 
 				with self.__control_lock:
 					self._loop = loop

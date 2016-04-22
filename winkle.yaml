@@ -33,7 +33,6 @@ sinks:
           minimum: 2
       - riak-quality-http
       - ads-thrift:
-          rack_aware: True
+          rack-aware: True
           minimum: 2
-      - frequency-thrift:
-          rack_aware: True
+#      - frequency-thrift

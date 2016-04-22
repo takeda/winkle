@@ -83,7 +83,7 @@ def create_pidfile(pidfile: str) -> Optional[int]:
 		fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
 	except (OSError, IOError):
 		os.close(fd)
-		print("It appears that the service-router is already running; exiting.")
+		print("It appears that the winkle is already running; exiting.")
 		return None
 
 	@atexit.register

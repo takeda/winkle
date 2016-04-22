@@ -13,7 +13,7 @@ log_config = {
 		'file': {
 			'class': 'logging.handlers.TimedRotatingFileHandler',
 			'formatter': 'simple',
-			'filename': 'service-router.log',
+			'filename': 'winkle.log',
 			'when': 'midnight',
 			'backupCount': 14,
 			'delay': True
@@ -31,7 +31,7 @@ log_config = {
 		'handlers': ['console']
 	},
 	'loggers': {
-		'service_router': {},
-		#'asyncio': {}
+		'winkle': {},
+		'asyncio': {}
 	}
 }

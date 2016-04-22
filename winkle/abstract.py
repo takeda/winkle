@@ -17,16 +17,13 @@ class AbsSourceSink(metaclass=ABCMeta):
 # noinspection PyStatementEffect
 class AbsSource(AbsSourceSink):
 	@abstractmethod
-	def start(self) -> None:
-		...
+	def start(self) -> None: ...
 
 
 # noinspection PyStatementEffect
 class AbsSink(AbsSourceSink):
 	@abstractproperty
-	def services_needed(self) -> T_SERVICES:
-		...
+	def services_needed(self) -> T_SERVICES: ...
 
 	@abstractmethod
-	def process_update(self, source: str, changes: T_CHANGES) -> None:
-		...
+	def process_update(self, source: str, changes: T_CHANGES) -> None: ...

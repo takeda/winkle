@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 from warnings import warn
 
 from .abstract import AbsSource
-from .caching import async_ttl_cache
+# from .caching import async_ttl_cache
 from .consul import Consul
 from .errors import ConnectionError, HTTPResponseError
 from .types import Node, NodeAddr, T_CHANGES, Changes
@@ -97,6 +97,7 @@ class ConsulListener(AbsSource):
 	# @async_ttl_cache(60)
 	async def _health_service(cls, service: str, index: Optional[str] = None) -> Tuple[str, str, List[Node]]:
 		while True:
+			# noinspection PyBroadException
 			try:
 				index, response = await cls._local.consul.health.service(service, index, '5m', passing=True)
 			except (ConnectionError, HTTPResponseError) as e:
@@ -110,6 +111,7 @@ class ConsulListener(AbsSource):
 			await asyncio.sleep(60)
 
 		nodes = []
+		# noinspection PyUnboundLocalVariable
 		for node in response:
 			attrs, tags = hashabledict(), []
 

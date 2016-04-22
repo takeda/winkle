@@ -58,6 +58,7 @@ class Router:
 			with self.__control_lock:
 				self._loop = loop
 
+			# noinspection PyShadowingNames
 			def signal_handler(signame):
 				log.warning('Got %s, terminating ...', signame)
 				loop.stop()

@@ -72,6 +72,7 @@ class HAProxy(AbsSink):
 	def _generate_config(self) -> bytes:
 		assert self._initialized
 
+		# noinspection PyShadowingBuiltins
 		def format(lines, level=1):
 			return map(lambda x: '%s%s\n' % ('\t' * level, x), lines)
 

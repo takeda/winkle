@@ -35,3 +35,27 @@ log_config = {
 		'asyncio': {}
 	}
 }
+
+default_config = {
+	'program': {
+		'services-config': 'services.yaml',
+		'rack': None
+	},
+	'sources': {
+		'consul': {
+			'host': '127.0.0.1',
+			'port': 8500,
+			'consistency': 'stale'
+		}
+	},
+	'sinks': {
+		'haproxy': {
+			'service': {
+				'config': '/etc/haproxy/haproxy.cfg',
+				'status': 'service haproxy status',
+				'start': 'service haproxy start',
+				'reload': 'service haproxy reload'
+			}
+		}
+	}
+}

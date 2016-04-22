@@ -12,14 +12,14 @@ def async_cache(cache):
 		lock = asyncio.Lock()
 
 		try:
-			indexpos = func.__code__.co_varnames.index('index')
+			index_pos = func.__code__.co_varnames.index('index')
 		except ValueError:
-			indexpos = None
+			index_pos = None
 
 		async def wrapper(*args, **kwargs):
 			k = cachetools.hashkey(*args, **kwargs)
 
-			if not ('index' in kwargs or (indexpos and indexpos < len(args) and args[indexpos])):
+			if not ('index' in kwargs or (index_pos and index_pos < len(args) and args[index_pos])):
 				try:
 					async with lock:
 						return cache[k]

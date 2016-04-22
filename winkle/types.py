@@ -19,6 +19,10 @@ Changes = NamedTuple('Changes', (
 T_CHANGES = Dict[str, Changes]
 
 class NodeAddr:
+	"""
+	Wrapper for `Node` which makes it comparable only by address/port
+	"""
+
 	def __init__(self, node: Node):
 		self.node = node
 

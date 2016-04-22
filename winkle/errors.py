@@ -6,6 +6,8 @@ class Error(Exception):
 class UnhandledException(Error):
 	pass
 
+
+# noinspection PyShadowingBuiltins
 class ConnectionError(Error):
 	pass
 

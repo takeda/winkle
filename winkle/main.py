@@ -17,17 +17,16 @@ def main(foreground: bool, config: str, pid_file: str):
 	yamlconfig = yamlcfg.YamlConfig(config)._data  # type: Mapping[str, Any]
 
 	if not foreground:
-		defaults.log_config['root']['handlers'] = ['simplefile']
-
-	logging.config.dictConfig(defaults.log_config)
-	log = logging.getLogger(__name__)  # type: logging.Logger
+		defaults.log_config['root']['handlers'] = ['file']
 
 	if foreground:
-		run(log, yamlconfig)
+		run(yamlconfig)
 	else:
-		daemon.daemonize(pid_file, run, log, yamlconfig)
+		daemon.daemonize(pid_file, run, yamlconfig)
 
-def run(log: logging.Logger, yamlconfig: Mapping[str, Any]):
+def run(yamlconfig: Mapping[str, Any]) -> None:
+	logging.config.dictConfig(defaults.log_config)
+	log = logging.getLogger(__name__)
 	log.info("Winkle by Derek Kulinski <derek.kulinski@openx.com>")
 
 	router = Router(yamlconfig)

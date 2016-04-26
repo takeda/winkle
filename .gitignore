@@ -1,5 +1,7 @@
 /.idea/
 /.py35/
+/build/
+/dist/
 /services
 /winkle.egg-info/
 __pycache__

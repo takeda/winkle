@@ -14,5 +14,6 @@ setup(
 	packages = ['winkle'],
 	test_suite = 'tests',
 	author = 'Derek Kulinski',
-	author_email = 'takeda@takeda.tk'
+	author_email = 'derek.kulinski@openx.com',
+	url = 'https://github.corp.openx.com/black/winkle'
 )

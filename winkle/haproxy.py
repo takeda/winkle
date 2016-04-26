@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict, OrderedDict
 from io import StringIO
+from pathlib import Path
 from typing import Any, Dict, Mapping
 
 from .abstract import AbsSink, T_SERVICES
@@ -34,7 +35,7 @@ class HAProxy(AbsSink):
 		self._config = config['sinks']['haproxy']  # type: Dict[str]
 		self._rack = config['program'].get('rack')
 		self._service_config = services
-		self._state_file = self._config['service']['state-file']  # type: str
+		self._state_file = Path(self._config['service']['state-file'])
 
 		self._service_updater = ServiceUpdater(self._config['service'])
 		self._comm = HAProxyComm(self._config['service']['socket'])
@@ -95,7 +96,7 @@ class HAProxy(AbsSink):
 			cnf.write("\n")
 
 			nodes = []
-			for node in sorted(self._hooks['service_nodes'](service), key=self._sorting_key):
+			for node in sorted(self._hooks['service_nodes'](service), key=self.__class__._sorting_key):
 				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
 
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
@@ -118,8 +119,27 @@ class HAProxy(AbsSink):
 
 		return self._monitored_services
 
-	def process_update(self, source: str, changes: T_CHANGES) -> None:
-		assert self._initialized
+	def _incremental_update(self, changes: T_CHANGES) -> bool:
+		"""
+		Decide whether service needs to be reloaded or updated, and enable/disable services as needed
+
+		logic:
+		for each backend:
+		  - if entries in updated set -> reload
+		  - for added host
+		    - if new backend -> reload
+		    - if new host is added -> reload
+		    - if host is disabled -> enable
+		  - if config reload, skip to next backend
+		  - for removed host
+		    - if host not in state -> force reload (bug?)
+		    - if host already disabled -> force reload (bug?)
+		    - add to disabled list
+		if no reload is necessary, disable nodes on the list
+
+		:param changes: list of incremental changes
+		:return: should service be reloaded
+		"""
 
 		backends = self._comm.get_backends()
 
@@ -155,29 +175,53 @@ class HAProxy(AbsSink):
 
 			for server in change.removed:
 				if server.name not in state:
-					log.warning("%s/%s is being removed but haproxy doesn't recognize it", backend, server.name)
-					continue
+					log.error("%s/%s is being removed but haproxy doesn't recognize it; forcing reload", backend,
+						server.name)
+					reload = True
+					break
 
 				if self._comm.is_server_disabled(backend, server.name, state):
-					log.warning("%s/%s is being removed but haproxy doesn't recognize it", backend, server.name)
-					continue
+					log.error("%s/%s is being removed but haproxy doesn't recognize it; forcing reload", backend,
+						server.name)
+					reload = True
+					break
 
 				disable[backend].append(server.name)
-
-		log.debug("Generating config")
-		new_config = self._generate_config()
-		if not self._service_updater.needs_update(new_config):
-			log.info("No change in config, skipping")
-			return
-
-		self._service_updater.update_config(new_config)
 
 		if not reload:
 			for backend, servers in disable.items():
 				for server in servers:
 					log.info('disabling %s/%s', backend, server)
 					self._comm.disable_server(backend, server)
+
+		return reload
+
+	def process_update(self, source: str, changes: T_CHANGES) -> None:
+		assert self._initialized
+
+		running = self._service_updater.is_running()
+		reload = self._incremental_update(changes) if running else False
+
+		log.debug("Generating config")
+		new_config = self._generate_config()
+
+		if self._service_updater.needs_update(new_config):
+			log.info("Config is different; updating")
+			self._service_updater.update_config(new_config)
 		else:
+			log.info("No change in config; skipping update")
+
+		if not running:
+			log.info("HAProxy is not running; starting the service")
+
+			# If state file exists, it most likely is invalid
+			if self._state_file.exists():
+				self._state_file.unlink()
+
+			self._service_updater.start()
+		elif reload:
 			log.info("Writing state file to %s", self._state_file)
 			self._comm.save_state(self._state_file)
-			self._service_updater.reload_config()
+
+			log.info("Reloading haproxy")
+			self._service_updater.reload()

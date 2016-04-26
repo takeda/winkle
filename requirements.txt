@@ -1,0 +1,6 @@
+aiohttp==0.21.5
+cachetools==1.1.6
+chardet==2.3.0
+click==6.6
+PyYAML==3.11
+yamlcfg==0.5.3

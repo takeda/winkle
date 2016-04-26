@@ -19,6 +19,7 @@ class ServiceUpdater:
 
 		self._pidfile = config['pid-file']       # type: str
 		self._checkcfg = config['check-config']  # type: str
+		self._status = config['status']          # type: str
 		self._start = config['start']            # type: str
 		self._reload = config['reload']          # type: str
 
@@ -38,7 +39,7 @@ class ServiceUpdater:
 			of.write(new_config)
 
 		log.info("Validating %s", self._config_file_new)
-		if not self.valid_config(str(self._config_file_new)):
+		if not self.validate_config(str(self._config_file_new)):
 			raise UpdateError("Generated config is not valid.")
 
 		if self._config_file.is_file():
@@ -48,16 +49,24 @@ class ServiceUpdater:
 		log.info("Installing new config in %s" % self._config_file)
 		self._config_file_new.rename(self._config_file)
 
-	def valid_config(self, file: str) -> bool:
+	def validate_config(self, file: str) -> bool:
 		log.debug("Validating config %s", file)
 		return subprocess.call(self._checkcfg.format(config=file), shell=True) == 0
 
-	def reload_config(self) -> bool:
-		log.debug("Reloading haproxy")
+	def is_running(self) -> bool:
+		return subprocess.call(self._status.format(pidfile=self._pidfile), shell=True) == 0
+
+	def start(self) -> bool:
+		return subprocess.call(self._start.format(config=self._config_file, pidfile=self._pidfile), shell=True) == 0
+
+	def reload(self) -> bool:
 		return subprocess.call(self._reload.format(config=self._config_file, pidfile=self._pidfile), shell=True) == 0
 
 	def _get_file_hash(self) -> str:
-		"""Computes hash of the configuration file, returns empty string when file does not exist"""
+		"""
+		Computes hash of the configuration file
+		:return: computed hash or empty string when file does not exist
+		"""
 
 		if not self._config_file.is_file():
 			return ''

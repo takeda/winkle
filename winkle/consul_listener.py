@@ -36,7 +36,6 @@ class ConsulListener(AbsSource):
 
 			with closing(asyncio.new_event_loop()) as loop:  # type: asyncio.BaseEventLoop
 				asyncio.set_event_loop(loop)
-				# loop.set_debug(True)
 
 				with self.__control_lock:
 					self._loop = loop
@@ -151,7 +150,7 @@ class ConsulListener(AbsSource):
 		# Calculate differences
 		changes = {}
 		for service in services:
-			log.debug("Fetching health of service %s", service)
+			log.debug("Calculating differences in health of service %s", service)
 
 			# get nodes for given service
 			old_nodes = set(old_state.get(service, []))

@@ -2,12 +2,12 @@ import csv
 import io
 import socket
 from contextlib import closing
+from pathlib import Path
 from typing import List, Dict, Any
 
 from .haproxy_comm_enums import ServerState, ServerAdmin, CheckStatus, CheckResult, CheckState
 
 csv.register_dialect('haproxy', delimiter=' ', quoting=csv.QUOTE_NONE)
-
 
 T_SERVERS_STATE = Dict[str, Dict[str, Any]]
 
@@ -51,8 +51,8 @@ class HAProxyComm:
 	def disable_server(self, backend: str, server: str):
 		self._command('disable server %s/%s' % (backend, server))
 
-	def save_state(self, file: str) -> None:
-		with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock, open(file, 'wb') as fo:
+	def save_state(self, file: Path) -> None:
+		with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock, file.open('wb') as fo:
 			sock.connect(self._socket)
 			sock.sendall(b'show servers state\n')
 

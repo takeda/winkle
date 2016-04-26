@@ -7,7 +7,7 @@ import cachetools
 
 log = logging.getLogger(__name__)
 
-def async_cache(cache):
+def async_index_cache(cache):
 	def decorator(func):
 		lock = asyncio.Lock()
 
@@ -19,18 +19,26 @@ def async_cache(cache):
 		async def wrapper(*args, **kwargs):
 			k = cachetools.hashkey(*args, **kwargs)
 
-			if not ('index' in kwargs or (index_pos and index_pos < len(args) and args[index_pos])):
-				try:
-					async with lock:
-						return cache[k]
-				except KeyError:
-					log.debug("Cache miss; requesting data")
+			# Figure out index value from the arguments
+			req_index = kwargs.get('index')
+			if req_index is None and index_pos is not None and index_pos < len(args):
+				req_index = args[index_pos]
 
+			async with lock:
+				index, value = cache.get(k, (0, None))
+
+			if value is not None:
+				if req_index is None or int(req_index) < index:
+					log.debug("Cache hit (index %d)", index)
+					return value
+
+			log.debug("Cache miss; requesting data")
 			v = await func(*args, **kwargs)
+			index = int(v[0])
 
 			try:
 				async with lock:
-					cache[k] = v
+					cache[k] = index, v
 			except ValueError:
 				pass  # value too large
 
@@ -42,4 +50,4 @@ def async_cache(cache):
 	return decorator
 
 def async_ttl_cache(ttl = 600, maxsize = 128, timer = time.time, getsizeof = None):
-	return async_cache(cachetools.TTLCache(maxsize, ttl, timer, getsizeof))
+	return async_index_cache(cachetools.TTLCache(maxsize, ttl, timer, getsizeof))

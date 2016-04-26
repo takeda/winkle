@@ -37,6 +37,7 @@ class HAProxyTest(TestCase):
 					'service': {
 						'config': 'haproxy.cfg',
 						'check-config': 'haproxy -c -f {file}',
+						'status': 'service haproxy status',
 						'start': 'service haproxy start',
 						'reload': 'service haproxy reload',
 						'pid-file': '/var/run/haproxy.pid',
@@ -81,8 +82,8 @@ class HAProxyTest(TestCase):
 			'service2source': service2source
 		}
 
+		HAProxy._sorting_key = None
 		self.haproxy = HAProxy(config, services)
-		self.haproxy._sorting_key = None
 		self.haproxy.set_hooks(hooks)
 		self.haproxy.start()
 

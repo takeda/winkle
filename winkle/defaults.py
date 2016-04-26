@@ -17,13 +17,6 @@ log_config = {
 			'when': 'midnight',
 			'backupCount': 14,
 			'delay': True
-		},
-		'simplefile': {
-			'class': 'logging.FileHandler',
-			'formatter': 'simple',
-			'filename': 'log',
-			'mode': 'w',
-			'delay': False
 		}
 	},
 	'root': {

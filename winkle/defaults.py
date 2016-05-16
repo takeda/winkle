@@ -1,3 +1,45 @@
+default_config = {
+	'program': {
+		'services-config': '/etc/winkle/services.yaml',
+		'rack': None,
+		'user': 'nobody',
+		'group': 'nobody',
+		'log-file': '/var/log/winkle/winkle.log',
+		'pid-file': '/var/run/winkle/winkle.pid'
+	},
+	'sources': {
+		'consul': {
+			'host': '127.0.0.1',
+			'port': 8500,
+			'consistency': 'stale'
+		}
+	},
+	'sinks': {
+		'haproxy': {
+			'service': {
+				'config': '/etc/haproxy/haproxy.cfg',
+				'status': 'sudo service haproxy status',
+				'start': 'sudo service haproxy start',
+				'reload': 'sudo service haproxy reload',
+				'pid-file': '/var/run/haproxy.pid',
+				'check-config': '/usr/sbin/haproxy -c -f {config}'
+			},
+			'global': [
+				'stats socket /tmp/haproxy.sock mode 660 level admin',
+				'server-state-file /var/run/winkle/haproxy.state'
+			],
+			'defaults': [
+				'retries 3',
+				'timeout connect 5s',
+				'timeout client 10m',
+				'timeout server 10m',
+				'load-server-state-from-file global'
+			],
+			'services': []
+		}
+	}
+}
+
 # Configure logging
 log_config = {
 	'version': 1,
@@ -21,34 +63,10 @@ log_config = {
 	},
 	'root': {
 		'level': 'DEBUG',
-		'handlers': ['console']
+		'handlers': ['file']
 	},
 	'loggers': {
 		'winkle': {},
 		'asyncio': {}
-	}
-}
-
-default_config = {
-	'program': {
-		'services-config': 'services.yaml',
-		'rack': None
-	},
-	'sources': {
-		'consul': {
-			'host': '127.0.0.1',
-			'port': 8500,
-			'consistency': 'stale'
-		}
-	},
-	'sinks': {
-		'haproxy': {
-			'service': {
-				'config': '/etc/haproxy/haproxy.cfg',
-				'status': 'service haproxy status',
-				'start': 'service haproxy start',
-				'reload': 'service haproxy reload'
-			}
-		}
 	}
 }

@@ -4,8 +4,8 @@ import grp
 import logging
 import os.path
 import pwd
-# import string
-# import subprocess
+import string
+import subprocess
 import socket
 import sys
 # import time
@@ -13,54 +13,52 @@ import sys
 # from contextlib import closing
 from typing import Callable, Optional
 
-# from pkg_resources import resource_string
+from pkg_resources import resource_string
 
 log = logging.getLogger(__name__)
 
-# def install(config):
-# 	user, group = config['user'], config['group']
-# 	uid, gid = get_ids(user, group)
-#
-# 	if os.getuid() != 0:
-# 		print("This command requires root permissions")
-# 		sys.exit(os.EX_USAGE)
-#
-# 	for file in [config['logfile'], config['pidfile']]:
-# 		dir = os.path.dirname(file)
-# 		print("Ensuring that %s exists and is owned by %s:%s" % (dir, uid, gid))
-#
-# 		try:
-# 			os.makedirs(dir)
-# 		except OSError:
-# 			pass
-#
-# 		os.chown(dir, uid, gid)
-# 		os.chmod(dir, 0o755)
-#
-# 	sysname = os.uname()[0]
-# 	if sysname == 'Linux':
-# 		rc = '/etc/init.d'
-# 	elif sysname == 'FreeBSD':
-# 		rc = '/usr/local/etc/rc.d'
-# 	else:
-# 		rc = '/etc/rc.d'
-#
-# 	script_file = os.path.join(rc, 'etmagent')
-#
-# 	template = resource_string(__name__, 'files/etmagent.in').decode('us-ascii')
-# 	rc_script = string.Template(template).safe_substitute({
-# 		'subs_pid_file': config['pidfile'],
-# 		'subs_etmagent_bin': sys.argv[0],
-# 		'subs_options': '-u %s:%s -p %s -l %s' % (user, group, config['pidfile'], config['logfile'])
-# 	})
-#
-# 	print("Installing %s init script" % script_file)
-# 	with open(script_file, 'w') as fo:
-# 		fo.write(rc_script)
-# 		os.fchmod(fo.fileno(), 0o755)
-#
-# 	print("Enabling etmagent service")
-# 	subprocess.check_call(["chkconfig", "--add", "etmagent"])
+def install(config):
+	user, group = config['program']['user'], config['program']['group']
+	uid, gid = get_ids(user, group)
+
+	if os.getuid() != 0:
+		print("This command requires root permissions")
+		sys.exit(os.EX_USAGE)
+
+	for file in [config['program']['log-file'], config['program']['pid-file']]:
+		dir = os.path.dirname(file)
+		print("Ensuring that %s exists and is owned by %s:%s" % (dir, uid, gid))
+
+		try:
+			os.makedirs(dir)
+		except OSError:
+			pass
+
+		os.chown(dir, uid, gid)
+		os.chmod(dir, 0o755)
+
+	sys_name = os.uname()[0]
+	if sys_name == 'Linux':
+		rc = '/etc/init.d'
+	else:
+		raise NotImplementedError('Unsupported system: %s' % sys_name)
+
+	script_file = os.path.join(rc, 'winkle')
+
+	template = resource_string(__name__, 'files/winkle.in').decode('us-ascii')
+	rc_script = string.Template(template).safe_substitute({
+		'subs_pid_file': config['program']['pid-file'],
+		'subs_winkle_bin': sys.argv[0],
+		'subs_options': '-u %s:%s -p %s -l %s' % (user, group, config['program']['pid-file'], config['program']['log-file'])
+	})
+
+	print("Installing %s init script" % script_file)
+	with open(script_file, 'w') as fo:
+		fo.write(rc_script)
+		os.fchmod(fo.fileno(), 0o755)
+
+	print("Enabling winkle service")
+	subprocess.check_call(["chkconfig", "--add", "winkle"])
 
 def get_ids(user, group):
 	user = pwd.getpwnam(user)[2]

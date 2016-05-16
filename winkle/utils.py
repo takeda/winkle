@@ -1,3 +1,4 @@
+import collections
 from typing import Dict
 
 class hashabledict(dict):
@@ -9,3 +10,11 @@ class hashabledict(dict):
 			return False
 
 		return tuple(sorted(self.items())) == tuple(sorted(other.items()))
+
+def mergedict(d1, d2):
+	for key, new in d2.items():
+		old = d1.get(key)
+		if isinstance(old, collections.Mapping) and isinstance(new, collections.Mapping):
+			mergedict(old, new)
+		else:
+			d1[key] = new

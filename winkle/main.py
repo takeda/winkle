@@ -47,6 +47,9 @@ def main(install: bool, foreground: bool, config: str, pid_file: str, log_file: 
 		daemon.install(computed_config)
 		sys.exit()
 
+	uidgid = daemon.get_ids(computed_config['program']['user'], computed_config['program']['group'])
+	daemon.reduce_privileges(uidgid)
+
 	defaults.log_config['handlers']['file']['filename'] = computed_config['program']['log-file']
 
 	if foreground:

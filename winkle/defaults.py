@@ -22,10 +22,12 @@ default_config = {
 				'start': 'sudo service haproxy start',
 				'reload': 'sudo service haproxy reload',
 				'pid-file': '/var/run/haproxy.pid',
+				'state-file': '/var/run/winkle/haproxy.state',
+				'socket': '/var/lib/haproxy/haproxy.sock',
 				'check-config': '/usr/sbin/haproxy -c -f {config}'
 			},
 			'global': [
-				'stats socket /tmp/haproxy.sock mode 660 level admin',
+				'stats socket /var/lib/haproxy/haproxy.sock mode 660 level admin',
 				'server-state-file /var/run/winkle/haproxy.state'
 			],
 			'defaults': [

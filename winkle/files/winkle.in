@@ -22,9 +22,12 @@ options="$subs_options"
 prog=winkle
 RETVAL=0
 
+export LC_ALL=en_US.utf-8
+export LANG=en_US.utf-8
+
 start() {
         echo -n $"Starting $prog: "
-        env LANG=en_US.UTF-8 $program $options
+        $program $options
         RETVAL=$?
         echo
 }

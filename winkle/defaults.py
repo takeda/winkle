@@ -1,6 +1,7 @@
 default_config = {
 	'program': {
 		'services-config': '/etc/winkle/services.yaml',
+		'config-dir': None,
 		'rack': None,
 		'user': 'nobody',
 		'group': 'nobody',

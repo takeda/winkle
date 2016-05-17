@@ -1,6 +1,7 @@
 import logging.config
 import sys
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Mapping
 
 import click
@@ -31,10 +32,21 @@ USERGROUP = UserGroupParam()
 @click.option('--user', '-u', type=USERGROUP, help='User and group')
 @click.version_option()
 def main(install: bool, foreground: bool, config: str, pid_file: str, log_file: str, user: tuple):
+	# Get default config
 	computed_config = deepcopy(defaults.default_config)
-	yaml_config = yamlcfg.YamlConfig(paths=[config])._data
+
+	# Marge it with user config
+	yaml_config = yamlcfg.YAMLConfig(paths=[config])._data
 	mergedict(computed_config, yaml_config)
 
+	# Merge it with config in configuration directory
+	if computed_config['program']['config-dir']:
+		path = Path(computed_config['program']['config-dir'])
+		for file in sorted(path.glob('*.yaml')):
+			yaml_config = yamlcfg.YAMLConfig(str(file))._data
+			mergedict(computed_config, yaml_config)
+
+	# Override config with command line options
 	if pid_file:
 		computed_config['program']['pid-file'] = pid_file
 	if log_file:

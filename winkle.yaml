@@ -25,3 +25,6 @@ sinks:
           rack-aware: True
           minimum: 2
 #      - frequency-thrift
+    extra:
+      - "#test1"
+      - "#test2"

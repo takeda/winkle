@@ -105,6 +105,10 @@ class HAProxy(AbsSink):
 
 			cnf.writelines(format(nodes))
 
+		if len(self._config['extra']) > 0:
+			cnf.write("\n# Extra configuration added (you should normally avoid this setting)\n")
+			cnf.writelines(format(self._config['extra'], level=0))
+
 		return cnf.getvalue().encode()
 
 	def _same_rack(self, rack: str) -> bool:

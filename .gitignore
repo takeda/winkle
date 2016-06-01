@@ -3,5 +3,6 @@
 /build/
 /dist/
 /services
+/config.d/
 /winkle.egg-info/
 __pycache__

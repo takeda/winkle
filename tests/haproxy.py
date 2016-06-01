@@ -49,7 +49,8 @@ class HAProxyTest(TestCase):
 					'services': [
 						'service-1',
 						{'service-2': {'rack-aware': True}}
-					]
+					],
+					'extra': ['line 1', 'line 2']
 				}
 			}
 		}

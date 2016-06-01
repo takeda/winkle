@@ -38,7 +38,8 @@ default_config = {
 				'timeout server 10m',
 				'load-server-state-from-file global'
 			],
-			'services': []
+			'services': [],
+			'extra': []
 		}
 	}
 }

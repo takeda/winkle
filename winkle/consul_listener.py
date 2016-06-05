@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import threading
-from asyncio import CancelledError
+from asyncio import CancelledError, ensure_future
 from contextlib import closing
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 from warnings import warn
@@ -56,45 +56,73 @@ class ConsulListener(AbsSource):
 	def stop(self):
 		raise NotImplementedError()
 
+	@staticmethod
+	def _get_monitor_services(services: List[str]) -> List[str]:
+		monitors = []
+		data_centers = set()
+
+		for name in services:
+			dc, _ = Consul.data_center(name)
+
+			if dc in data_centers:
+				continue
+
+			monitors.append(name)
+			data_centers.add(dc)
+
+		return monitors
+
 	async def _monitor(self) -> None:
 		self._local.state = {}
-
-		services = self._hooks['services_needed']('consul')  # type: List[str]
-
-		if len(services) == 0:
-			log.error("No services to monitor")
-			return
-
-		service = services[0]
-		log.debug("Starting monitoring of %s", service)
-
 		self._local.consul = self._consul(self._config['host'], self._config['port'],
 			consistency=self._config['consistency'])
 
-		index = None
+		# Services that we pay attention to
+		services = self._hooks['services_needed']('consul')  # type: List[str]
+
+		# Services which we use for monitoring (each supposed to have their own index)
+		monitored_services = self._get_monitor_services(services)
+
+		if len(monitored_services) == 0:
+			log.error("No services to monitor")
+			return
+
+		log.debug("Using following services for monitoring indices: %s", ", ".join(monitored_services))
+
+		# Schedule services
+		pending = {ensure_future(self._health_service(service)) for service in monitored_services}
+		index = {}  # type: Dict[str, str]
 		while True:
-			try:
-				i, _, _ = await self._health_service(service, index)
-			except CancelledError:
-				log.info("Got cancellation request; exiting")
-				raise
+			done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
 
-			log.debug("%s: got index %s" % (service, i))
+			changed = False
+			for task in done:
+				try:
+					i, service, _ = task.result()
+				except CancelledError:
+					log.info("Got cancellation request; exiting")
+					raise
 
-			if i == index:
-				log.debug("%s - timeout; no change", service)
-				continue
+				if i == index.get(service, '0'):
+					log.debug("%s - timeout; no change", service)
+				else:
+					changed = True
+					index[service] = i
 
-			changes = await self._calculate_changes(services, i)
-			self._hooks['change_detected']('consul', changes)
+				pending.add(ensure_future(self._health_service(service, i)))
 
-			index = i
+			if changed:
+				log.debug("Calculating differences in consul changes %s", [(name, value) for name, value in index.items()])
+				changes = await self._calculate_changes(services)
+				self._hooks['change_detected']('consul', changes)
+			else:
+				log.debug("No changes detected")
 
 		self._local.consul.close()
 
 	@classmethod
 	# @async_ttl_cache(60)
-	async def _health_service(cls, service: str, index: Optional[str] = None) -> Tuple[str, str, List[Node]]:
+	async def _health_service(cls, service: str, index: str = None) -> Tuple[str, str, List[Node]]:
 		while True:
 			# noinspection PyBroadException
 			try:
@@ -106,7 +134,7 @@ class ConsulListener(AbsSource):
 			else:
 				break
 
-			log.info("Sleeping for 1 minute before retrying")
+			log.info("%s: Sleeping for 1 minute before retrying" % service)
 			await asyncio.sleep(60)
 
 		nodes = []
@@ -129,9 +157,9 @@ class ConsulListener(AbsSource):
 		return index, service, nodes
 
 	@classmethod
-	async def _get_new_state(cls, services: List[str], index: str = None) -> Dict[str, List[Node]]:
+	async def _get_new_state(cls, services: List[str]) -> Dict[str, List[Node]]:
 		# schedule tasks
-		futures = [asyncio.ensure_future(cls._health_service(service, index)) for service in services]
+		futures = [asyncio.ensure_future(cls._health_service(service)) for service in services]
 
 		# process results
 		results = {}
@@ -141,16 +169,14 @@ class ConsulListener(AbsSource):
 
 		return results
 
-	async def _calculate_changes(self, services: List[str], index: str) -> T_CHANGES:
-		log.debug("Calculating differences in consul change #%s", index)
-
+	async def _calculate_changes(self, services: List[str]) -> T_CHANGES:
 		old_state = self._local.state
 		new_state = await self._get_new_state(services)
 
 		# Calculate differences
 		changes = {}
 		for service in services:
-			log.debug("Calculating differences in health of service %s", service)
+			canonical_service = self._hooks['source2service']('consul', service)
 
 			# get nodes for given service
 			old_nodes = set(old_state.get(service, []))
@@ -164,14 +190,14 @@ class ConsulListener(AbsSource):
 			removed = frozenset(x.node for x in old_addrs - new_addrs)
 			updated = frozenset(new_nodes - old_nodes - added)
 
-			changes[service] = Changes(added, removed, updated)
+			changes[canonical_service] = Changes(added, removed, updated)
 
 		self._local.state = new_state
 
 		return changes
 
 	# thread safe interface
-	def service_nodes(self, service: str, timeout: Optional[int] = 5) -> List[Node]:
+	def service_nodes(self, service: str, timeout: int = 5) -> List[Node]:
 		"""
 		Obtains list of available nodes for given service (threadsafe)
 		:param service: name of the service (consul)

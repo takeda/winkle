@@ -40,8 +40,12 @@ class HAProxy(AbsSink):
 		self._service_updater = ServiceUpdater(self._config['service'])
 		self._comm = HAProxyComm(self._config['service']['socket'])
 
+		# dictionary in form of canonical service name -> dict containing options
 		self._services = OrderedDict()                # type: T_SERVICES_CONFIG
+
+		# dictionary in form of source -> internal list of services (for cached lookups)
 		self._monitored_services = defaultdict(list)  # type: T_SERVICES
+
 		self._setup()
 
 	def _setup(self) -> None:
@@ -49,13 +53,14 @@ class HAProxy(AbsSink):
 		for service_name in self._config['services']:
 			defaults = {
 				'rack-aware': False,
-				'minimum': 0
+				'minimum': 0,
+				'data-center': None
 			}
 
 			if isinstance(service_name, dict):
 				if len(service_name) != 1:
 					raise ConfigError('Dictionary needs to have only one element (perhaps you forgot'
-					                  'a minus sign in yaml config?)')
+					                  'a dash in yaml config?)')
 
 				name = list(service_name)[0]
 				self._services[name] = defaults
@@ -64,8 +69,8 @@ class HAProxy(AbsSink):
 				self._services[service_name] = defaults
 
 	def start(self) -> None:
-		for service_name in self._services:
-			source, service = self._hooks['service2source'](service_name)
+		for service_name, options in self._services.items():
+			source, service = self._hooks['service2source'](service_name, options.get('data-center'))
 			self._monitored_services[source].append(service)
 
 		self._initialized = True
@@ -96,7 +101,9 @@ class HAProxy(AbsSink):
 			cnf.write("\n")
 
 			nodes = []
-			for node in sorted(self._hooks['service_nodes'](service), key=self.__class__._sorting_key):
+			for node in sorted(self._hooks['service_nodes'](service, config.get('data-center')),
+					key=self.__class__._sorting_key):
+
 				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
 
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
@@ -214,11 +221,12 @@ class HAProxy(AbsSink):
 			self._service_updater.update_config(new_config)
 		else:
 			log.info("No change in config; skipping update")
+			reload = False  # if we didn't modify the file there's no point reloading
 
 		if not running:
 			log.info("HAProxy is not running; starting the service")
 
-			# If state file exists, it most likely is invalid
+			# If state file exists at this point it is invalid
 			if self._state_file.exists():
 				self._state_file.unlink()
 

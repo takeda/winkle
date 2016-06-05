@@ -17,14 +17,3 @@ sinks:
     global:
       - stats socket /tmp/haproxy.sock mode 660 level admin
       - server-state-file services/haproxy.state
-    services:
-      - riak-suanpan-pb:
-          minimum: 2
-      - riak-quality-http
-      - ads-thrift:
-          rack-aware: True
-          minimum: 2
-#      - frequency-thrift
-    extra:
-      - "#test1"
-      - "#test2"

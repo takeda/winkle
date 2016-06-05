@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Mapping
+from typing import Any, Callable, List, Mapping, Optional
 
 from .consul_listener import ConsulListener
 from .types import Node
@@ -18,8 +18,8 @@ class Sources:
 	def stop(self):
 		pass
 
-	def service_nodes(self, service_name: str) -> List[Node]:
-		source, service = self._hooks['service2source'](service_name)
+	def service_nodes(self, service_name: str, data_center: Optional[str]) -> List[Node]:
+		source, service = self._hooks['service2source'](service_name, data_center)
 		if source == 'consul':
 			return self.consul.service_nodes(service)
 

@@ -1,7 +1,7 @@
 import logging
 import urllib.parse
 from enum import Enum
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Tuple
 
 import aiohttp
 
@@ -47,7 +47,24 @@ class Consul:
 			if wait:
 				params.update({'wait': wait})
 
-	async def get(self, path: str, params: Optional[dict]=None) -> (aiohttp.HttpMessage, Mapping[str, Any]):
+	@staticmethod
+	def data_center(name: str) -> Tuple[Optional[str], str]:
+		"""
+		Processes a service name, if the name contains slash splits it into datacenter and service
+		:param name: name of the service as listed in the configuration file
+		:return: tuple conatining datacenter and service name, if there's no datacenter then first element is None
+		"""
+		dc_service = name.split('/')
+
+		if len(dc_service) == 1:
+			return None, name
+
+		if not dc_service[0]:
+			dc_service[0] = None
+
+		return dc_service[0], dc_service[1]
+
+	async def get(self, path: str, params: Optional[dict]=None) -> Tuple[aiohttp.HttpMessage, Mapping[str, Any]]:
 		"""
 		Makes a get request to consul and returns headers and json response
 		:param path: path for the request
@@ -87,10 +104,14 @@ class Health:
 	def __init__(self, agent: Consul):
 		self._agent = agent
 
-	async def service(self, service: str, index: Optional[str]=None, wait: Optional[str]=None,
-			passing: Optional[bool]=None, consistency: Consistency=None):
+	async def service(self, service: str, index: str = None, wait: str = None,
+			passing: bool = None, consistency: Consistency = None) -> Tuple[str, Mapping[str, Any]]:
 
 		params = {}
+		dc, service = self._agent.data_center(service)
+		if dc:
+			params['dc'] = dc
+
 		self._agent.consistency(params, consistency)
 		self._agent.blocking(params, index, wait)
 		if passing:

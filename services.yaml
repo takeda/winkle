@@ -1,4 +1,4 @@
-riak-suanpan-pb:
+cs-riak-suanpan-pb:
   discovery:
     method: consul
     service: riak-suanpan-pb
@@ -20,7 +20,7 @@ riak-quality-http:
       - balance roundrobin
     server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7
 
-ads-thrift:
+cs-ads-thrift:
   discovery:
     method: consul
     service: ads-thrift

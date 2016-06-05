@@ -6,7 +6,7 @@ from winkle.types import Node
 
 path = Path(__file__)
 
-def service_nodes(service):
+def service_nodes(service, datacenter):
 	return {
 		'service-1': [
 			Node('1.1.1.1', '1234', 'node1', None, None),
@@ -18,7 +18,7 @@ def service_nodes(service):
 		]
 	}[service]
 
-def service2source(name):
+def service2source(name, datacenter):
 	return {
 		'service-1': ('consul', 'consul-service-1'),
 		'service-2': ('marathon', 'marathon-service-1')

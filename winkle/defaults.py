@@ -40,7 +40,8 @@ default_config = {
 			],
 			'services': [],
 			'extra': []
-		}
+		},
+		'configs': []
 	}
 }
 

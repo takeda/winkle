@@ -15,7 +15,7 @@ T_SERVICES_CONFIG = Dict[str, Dict[str, Any]]
 log = logging.getLogger(__name__)
 
 STATS_CONFIG = [
-	'bind *:1024',
+	'bind :1024',
 	'mode http',
 	'stats enable',
 	'stats uri /',
@@ -211,7 +211,10 @@ class HAProxy(AbsSink):
 		assert self._initialized
 
 		running = self._service_updater.is_running()
-		reload = self._incremental_update(changes) if running else False
+		if self._comm.has_socket():
+			reload = self._incremental_update(changes) if running else False
+		else:
+			reload = True
 
 		log.debug("Generating config")
 		new_config = self._generate_config()
@@ -226,14 +229,19 @@ class HAProxy(AbsSink):
 		if not running:
 			log.info("HAProxy is not running; starting the service")
 
-			# If state file exists at this point it is invalid
+			# State file existing at this point is invalid
 			if self._state_file.exists():
 				self._state_file.unlink()
 
 			self._service_updater.start()
 		elif reload:
-			log.info("Writing state file to %s", self._state_file)
-			self._comm.save_state(self._state_file)
+			if self._comm.has_socket():
+				log.info("Writing state file to %s", self._state_file)
+				self._comm.save_state(self._state_file)
 
 			log.info("Reloading haproxy")
 			self._service_updater.reload()
+
+			# Remove state file after reload
+			if self._state_file.exists():
+				self._state_file.unlink()

@@ -15,6 +15,9 @@ class HAProxyComm:
 	def __init__(self, socket_name: str):
 		self._socket = socket_name
 
+	def has_socket(self):
+		return Path(self._socket).is_socket()
+
 	def get_backends(self):
 		response = self._command('show backend')
 		assert response[0] == '# name', 'Unexpected response from HAProxy'

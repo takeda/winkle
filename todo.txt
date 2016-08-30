@@ -4,15 +4,17 @@
 [x] optimize haproxy configuration
 [x] running in background
 [x] randomize entries
-[ ] support for mesos (ZK)
+[ ] support for marathon consumption (ZK?)
+[ ] support for marathon publishing (ZK?)
+[ ] support for kubernetes (etcd?)
 [x] rack awareness
 [x] incremental changes to haproxy
 [ ] template support?
 [ ] adding services on demand (mesos)
-[ ] support of consul across environments (mesos)
+[x] support of consul across environments (mesos)
 [ ] disable haproxy when service-router is down
 [ ] detection of minimum nodes expected per service
 [ ] maximum-minimum time to wait before reloading config
-[ ] ability to direct traffic from different datacenter
+[x] ability to direct traffic from different datacenter
 [ ] improve caching (better handling of index)
 [ ] mcp backend

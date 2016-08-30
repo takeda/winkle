@@ -6,7 +6,7 @@ from setuptools import setup
 def version(v):
 	if 'GO_PIPELINE_LABEL' in os.environ:
 		go_v = os.environ['GO_PIPELINE_LABEL'].split('.')
-		return '%s.dev%s+%s' % (v, go_v[0], go_v[1])
+		return '%s+%s.%s' % (v, go_v[0], go_v[1])
 
 	return v
 

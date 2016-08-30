@@ -3,8 +3,8 @@ default_config = {
 		'services-config': '/etc/winkle/services.yaml',
 		'config-dir': None,
 		'rack': None,
-		'user': 'nobody',
-		'group': 'nobody',
+		'user': 'winkle',
+		'group': 'winkle',
 		'log-file': '/var/log/winkle/winkle.log',
 		'pid-file': '/var/run/winkle/winkle.pid'
 	},
@@ -28,7 +28,7 @@ default_config = {
 				'check-config': '/usr/sbin/haproxy -c -f {config}'
 			},
 			'global': [
-				'stats socket /var/lib/haproxy/haproxy.sock mode 660 level admin',
+				'stats socket /var/lib/haproxy/haproxy.sock user winkle group winkle mode 660 level admin',
 				'server-state-file /var/run/winkle/haproxy.state'
 			],
 			'defaults': [

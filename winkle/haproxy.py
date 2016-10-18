@@ -101,16 +101,20 @@ class HAProxy(AbsSink):
 			cnf.write("\n")
 
 			nodes = []
-			for node in sorted(self._hooks['service_nodes'](service, config.get('data-center')),
-					key=self.__class__._sorting_key):
 
-				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
+			sorted_nodes = sorted(self._hooks['service_nodes'](service, config.get('data-center')),
+					key=self.__class__._sorting_key)
 
+			weights = self.calculate_weights(sorted_nodes, config)
+
+			for i in range(len(sorted_nodes)):
+				node = sorted_nodes[i]
+				weight = weights[i]
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],
-				                                       ' weight 10' if same_rack else ' weight 100'))
+				                                       ' weight %s' % weight))
 
-			cnf.writelines(format(nodes))
+		cnf.writelines(format(nodes))
 
 		if len(self._config['extra']) > 0:
 			cnf.write("\n# Extra configuration added (you should normally avoid this setting)\n")
@@ -118,11 +122,47 @@ class HAProxy(AbsSink):
 
 		return cnf.getvalue().encode()
 
+	def calculate_weights(self, nodes = [], config={}) -> list:
+		assert self._initialized
+		if not nodes:
+			return []
+
+		pcts = [None for n in nodes]
+		pct_rem = 1.0
+
+		rem_node_count = 0
+
+		for n in range(len(nodes)):
+			node = nodes[n]
+			canary_pct = node.attrs.get('canaryPct')
+			if canary_pct is not None:
+				canary_pct = float(canary_pct)
+				pcts[n] = canary_pct
+				pct_rem = pct_rem - canary_pct
+			else:
+				rem_node_count = rem_node_count + 1
+
+		if rem_node_count > 0:
+			rem_pct_per = pct_rem / rem_node_count
+			for p in range(len(pcts)):
+				if pcts[p] is not None:
+					continue
+				else:
+					same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
+					pcts[p] = rem_pct_per if same_rack else rem_pct_per / 10.0
+
+		min_pct = min(pcts)
+		scale_factor = 1.0 if min_pct <= 0 else 1.0 / min_pct
+		weights = [int(p * scale_factor) for p in pcts]
+		return weights
+
 	def _same_rack(self, rack: str) -> bool:
 		if rack is None or self._rack is None:
 			return True
 
 		return self._rack == rack
+
+
 
 	@property
 	def services_needed(self):

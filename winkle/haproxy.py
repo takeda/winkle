@@ -122,7 +122,7 @@ class HAProxy(AbsSink):
 
 		return cnf.getvalue().encode()
 
-	def calculate_weights(self, nodes = [], config={}) -> list:
+	def calculate_weights(self, nodes, config) -> list:
 		assert self._initialized
 		if not nodes:
 			return []

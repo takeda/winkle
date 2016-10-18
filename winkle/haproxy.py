@@ -107,14 +107,12 @@ class HAProxy(AbsSink):
 
 			weights = self.calculate_weights(sorted_nodes, config)
 
-			for i in range(len(sorted_nodes)):
-				node = sorted_nodes[i]
-				weight = weights[i]
+			for node, weight in zip(sorted_nodes, weights):
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],
 				                                       ' weight %s' % weight))
 
-		cnf.writelines(format(nodes))
+			cnf.writelines(format(nodes))
 
 		if len(self._config['extra']) > 0:
 			cnf.write("\n# Extra configuration added (you should normally avoid this setting)\n")
@@ -161,8 +159,6 @@ class HAProxy(AbsSink):
 			return True
 
 		return self._rack == rack
-
-
 
 	@property
 	def services_needed(self):

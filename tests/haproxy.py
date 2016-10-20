@@ -95,8 +95,8 @@ class HAProxyTest(unittest.TestCase):
 		node3 = Node('3.3.3.3', '3333', 'node3', {'rack': 'bb-b'}, [])
 		node4 = Node('4.4.4.4', '4444', 'node4', {'weight': '42'}, [])
 		node5 = Node('4.4.4.4', '4444', 'node5', {'weight': '24'}, [])
-		node6 = Node('6.6.6.6', '6666', 'node6', {'weight_pct': '25'}, [])
-		node7 = Node('7.7.7.7', '7777', 'node7', {'weight_pct': '50'}, [])
+		node6 = Node('6.6.6.6', '6666', 'node6', {'weight': '25%'}, [])
+		node7 = Node('7.7.7.7', '7777', 'node7', {'weight': '50%'}, [])
 
 		with self.subTest("empty node list"), mock.patch('winkle.haproxy.log') as log:
 			result = self.haproxy.calculate_weights([], False)

@@ -120,19 +120,17 @@ class HAProxy(AbsSink):
 	def calculate_weights(self, nodes: Iterable[Node], rack_aware: bool) -> List[Tuple[Node, int]]:
 		def node_weight(node: Node) -> Tuple[bool, Union[int, float]]:
 			weight = node.attrs.get('weight')
-			weight_pct = node.attrs.get('weight_pct')
-			same_rack = self._same_rack(node.attrs.get('rack')) if rack_aware else False
-
-			if weight is not None:
-				return False, int(weight)
-			elif weight_pct is not None:
-				return True, float(weight_pct)
-			else:
+			if weight is None:
+				same_rack = self._same_rack(node.attrs.get('rack')) if rack_aware else False
 				return False, 20 if same_rack else 10
 
+			if weight[-1] == '%':
+				return True, float(weight[:-1])
+
+			return False, int(weight)
+
 		# Sum all weights
-		sum_weight = 0
-		sum_weight_pct = 0
+		sum_weight, sum_weight_pct = 0, 0.0
 		for node in nodes:
 			percent, weight = node_weight(node)
 
@@ -158,14 +156,16 @@ class HAProxy(AbsSink):
 			percent, weight = node_weight(node)
 
 			if percent:
-				weight = min(256, max(0, round(weight_per_pct * weight)))
+				weight = round(weight_per_pct * weight)
 
-			result.append((node, weight))
+			result.append((node, min(256, max(0, weight))))
 
 		return result
 
 	def _same_rack(self, rack: str) -> bool:
-		if rack is None or self._rack is None:
+		assert rack is not None
+
+		if self._rack is None:
 			return True
 
 		return self._rack == rack

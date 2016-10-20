@@ -2,12 +2,12 @@ import logging
 from collections import defaultdict, OrderedDict
 from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 from .abstract import AbsSink, T_SERVICES
 from .errors import ConfigError
 from .haproxy_comm import HAProxyComm
-from .types import node_random_sort_key, T_CHANGES
+from .types import node_random_sort_key, T_CHANGES, Node
 from .service_updater import ServiceUpdater
 
 T_SERVICES_CONFIG = Dict[str, Dict[str, Any]]
@@ -100,14 +100,11 @@ class HAProxy(AbsSink):
 			cnf.writelines(format(service_config['options']))
 			cnf.write("\n")
 
-			nodes = []
-
 			sorted_nodes = sorted(self._hooks['service_nodes'](service, config.get('data-center')),
 					key=self.__class__._sorting_key)
 
-			weights = self.calculate_weights(sorted_nodes, config)
-
-			for node, weight in zip(sorted_nodes, weights):
+			nodes = []
+			for node, weight in self.calculate_weights(sorted_nodes, config['rack-aware']):
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],
 				                                       ' weight %s' % weight))
@@ -120,42 +117,57 @@ class HAProxy(AbsSink):
 
 		return cnf.getvalue().encode()
 
-	def calculate_weights(self, nodes, config) -> list:
-		assert self._initialized
-		if not nodes:
-			return []
+	def calculate_weights(self, nodes: Iterable[Node], rack_aware: bool) -> List[Tuple[Node, int]]:
+		def node_weight(node: Node) -> Tuple[bool, Union[int, float]]:
+			weight = node.attrs.get('weight')
+			if weight is None:
+				same_rack = self._same_rack(node.attrs.get('rack')) if rack_aware else False
+				return False, 20 if same_rack else 10
 
-		pcts = [None for n in nodes]
-		pct_rem = 1.0
+			if weight[-1] == '%':
+				return True, float(weight[:-1])
 
-		rem_node_count = 0
+			return False, int(weight)
 
-		for n in range(len(nodes)):
-			node = nodes[n]
-			canary_pct = node.attrs.get('canaryPct')
-			if canary_pct is not None:
-				canary_pct = float(canary_pct)
-				pcts[n] = canary_pct
-				pct_rem = pct_rem - canary_pct
+		# Sum all weights
+		sum_weight, sum_weight_pct = 0, 0.0
+		for node in nodes:
+			percent, weight = node_weight(node)
+
+			if percent:
+				sum_weight_pct += weight
 			else:
-				rem_node_count = rem_node_count + 1
+				sum_weight += weight
 
-		if rem_node_count > 0:
-			rem_pct_per = pct_rem / rem_node_count
-			for p in range(len(pcts)):
-				if pcts[p] is not None:
-					continue
-				else:
-					same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
-					pcts[p] = rem_pct_per if same_rack else rem_pct_per / 10.0
+		# Handle corner cases
+		if sum_weight <= 0:
+			log.error("There's not a single static weight; treating percentage weights as weights")
+			weight_per_pct = 1
+		elif sum_weight_pct >= 100:
+			log.error('Sum of percentage weights is equal or higher than 100% (%f); treating percentage '
+			          'weights as weights', sum_weight_pct)
+			weight_per_pct = 1
+		else:
+			weight_per_pct = sum_weight / (100 - sum_weight_pct)
 
-		min_pct = min(pcts)
-		scale_factor = 1.0 if min_pct <= 0 else 1.0 / min_pct
-		weights = [int(p * scale_factor) for p in pcts]
-		return weights
+		# Calculate weights
+		result = []
+		for node in nodes:
+			percent, weight = node_weight(node)
+
+			if percent:
+				weight = round(weight_per_pct * weight)
+				if weight < 1:
+					log.warning("%s's weight is calculated to %d; this node won't be receiving any traffic", node, weight)
+
+			result.append((node, min(256, max(0, weight))))
+
+		return result
 
 	def _same_rack(self, rack: str) -> bool:
-		if rack is None or self._rack is None:
+		assert rack is not None
+
+		if self._rack is None:
 			return True
 
 		return self._rack == rack

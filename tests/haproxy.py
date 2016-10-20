@@ -97,7 +97,8 @@ class HAProxyTest(unittest.TestCase):
 		node5 = Node('4.4.4.4', '4444', 'node5', {'weight': '24'}, [])
 		node6 = Node('6.6.6.6', '6666', 'node6', {'weight': '25%'}, [])
 		node7 = Node('7.7.7.7', '7777', 'node7', {'weight': '50%'}, [])
-		node8 = Node('8.8.8.8', '8888', 'node8', {'weight': '5.5%'}, [])
+		node8 = Node('8.8.8.8', '8888', 'node8', {'weight': '0.5%'}, [])
+		node9 = Node('9.9.9.9', '9999', 'node9', {'weight': '5.5%'}, [])
 
 		with self.subTest("empty node list"), mock.patch('winkle.haproxy.log') as log:
 			result = self.haproxy.calculate_weights([], False)
@@ -137,10 +138,17 @@ class HAProxyTest(unittest.TestCase):
 			                             "percentage weights as weights", 150.0)
 			self.assertEqual(result, [(node1, 10), (node7, 50), (node7, 50), (node7, 50)])
 
-		with self.subTest("fractional percentage"):
+		with self.subTest("fractional percentage (0.5%)"), mock.patch('winkle.haproxy.log') as log:
 			nodes = [node1, node4, node8]
 			result = self.haproxy.calculate_weights(nodes, False)
-			self.assertEqual(result, [(node1, 10), (node4, 42), (node8, 3)])
+			log.warning.assert_called_with("%s's weight is calculated to %d; this node won't be receiving any traffic",
+				node8, 0)
+			self.assertEqual(result, [(node1, 10), (node4, 42), (node8, 0)])
+
+		with self.subTest("fractional percentage (5.5%)"):
+			nodes = [node1, node4, node9]
+			result = self.haproxy.calculate_weights(nodes, False)
+			self.assertEqual(result, [(node1, 10), (node4, 42), (node9, 3)])
 
 	def test_config_generation(self):
 		with path.with_name('haproxy.cfg').open() as f:

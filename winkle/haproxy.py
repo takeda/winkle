@@ -158,7 +158,8 @@ class HAProxy(AbsSink):
 			if percent:
 				weight = round(weight_per_pct * weight)
 				if weight < 1:
-					log.warning("%s's weight is calculated to %d; this node won't be receiving any traffic", node, weight)
+					log.warning("%s's weight is calculated to %d; this node won't be receiving any traffic", node.name,
+						weight)
 
 			result.append((node, min(256, max(0, weight))))
 

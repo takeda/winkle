@@ -142,7 +142,7 @@ class HAProxyTest(unittest.TestCase):
 			nodes = [node1, node4, node8]
 			result = self.haproxy.calculate_weights(nodes, False)
 			log.warning.assert_called_with("%s's weight is calculated to %d; this node won't be receiving any traffic",
-				node8, 0)
+				node8.name, 0)
 			self.assertEqual(result, [(node1, 10), (node4, 42), (node8, 0)])
 
 		with self.subTest("fractional percentage (5.5%)"):

@@ -2,12 +2,12 @@ import logging
 from collections import defaultdict, OrderedDict
 from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 from .abstract import AbsSink, T_SERVICES
 from .errors import ConfigError
 from .haproxy_comm import HAProxyComm
-from .types import node_random_sort_key, T_CHANGES
+from .types import node_random_sort_key, T_CHANGES, Node
 from .service_updater import ServiceUpdater
 
 T_SERVICES_CONFIG = Dict[str, Dict[str, Any]]
@@ -100,15 +100,14 @@ class HAProxy(AbsSink):
 			cnf.writelines(format(service_config['options']))
 			cnf.write("\n")
 
+			sorted_nodes = sorted(self._hooks['service_nodes'](service, config.get('data-center')),
+					key=self.__class__._sorting_key)
+
 			nodes = []
-			for node in sorted(self._hooks['service_nodes'](service, config.get('data-center')),
-					key=self.__class__._sorting_key):
-
-				same_rack = self._same_rack(node.attrs.get('rack')) if config['rack-aware'] else True
-
+			for node, weight in self.calculate_weights(sorted_nodes, config['rack-aware']):
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],
-				                                       ' weight 10' if same_rack else ' weight 100'))
+				                                       ' weight %s' % weight))
 
 			cnf.writelines(format(nodes))
 
@@ -118,8 +117,58 @@ class HAProxy(AbsSink):
 
 		return cnf.getvalue().encode()
 
+	def calculate_weights(self, nodes: Iterable[Node], rack_aware: bool) -> List[Tuple[Node, int]]:
+		def node_weight(node: Node) -> Tuple[bool, Union[int, float]]:
+			weight = node.attrs.get('weight')
+			if weight is None:
+				same_rack = self._same_rack(node.attrs.get('rack')) if rack_aware else False
+				return False, 20 if same_rack else 10
+
+			if weight[-1] == '%':
+				return True, float(weight[:-1])
+
+			return False, int(weight)
+
+		# Sum all weights
+		sum_weight, sum_weight_pct = 0, 0.0
+		for node in nodes:
+			percent, weight = node_weight(node)
+
+			if percent:
+				sum_weight_pct += weight
+			else:
+				sum_weight += weight
+
+		# Handle corner cases
+		if sum_weight <= 0:
+			log.error("There's not a single static weight; treating percentage weights as weights")
+			weight_per_pct = 1
+		elif sum_weight_pct >= 100:
+			log.error('Sum of percentage weights is equal or higher than 100% (%f); treating percentage '
+			          'weights as weights', sum_weight_pct)
+			weight_per_pct = 1
+		else:
+			weight_per_pct = sum_weight / (100 - sum_weight_pct)
+
+		# Calculate weights
+		result = []
+		for node in nodes:
+			percent, weight = node_weight(node)
+
+			if percent:
+				weight = round(weight_per_pct * weight)
+				if weight < 1:
+					log.warning("%s's weight is calculated to %d; this node won't be receiving any traffic", node.name,
+						weight)
+
+			result.append((node, min(256, max(0, weight))))
+
+		return result
+
 	def _same_rack(self, rack: str) -> bool:
-		if rack is None or self._rack is None:
+		assert rack is not None
+
+		if self._rack is None:
 			return True
 
 		return self._rack == rack

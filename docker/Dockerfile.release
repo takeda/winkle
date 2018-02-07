@@ -1,0 +1,14 @@
+ARG imageName
+ARG imageTag
+FROM $imageName:$imageTag
+
+ENV winkle_build="/tmp/winkle_build"
+
+RUN mkdir -p $winkle_build
+COPY ./ $winkle_build
+
+RUN \
+  pip3 install --trusted-host maven.openx.org  -i https://maven.openx.org/artifactory/api/pypi/pypi-virtual/simple $winkle_build && \
+  rm -rf $winkle_build
+
+RUN mkdir /var/run/winkle

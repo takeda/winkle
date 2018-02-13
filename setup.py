@@ -12,7 +12,7 @@ def version(v):
 
 setup(
 	name = 'winkle',
-	version = version('1.3'),
+	version = version('1.4'),
 	install_requires = ['click ~= 6.6', 'aiohttp ~= 0.21.5', 'cachetools ~= 1.1.6', 'yamlcfg ~= 0.5.3'],
 	entry_points = {
 		'console_scripts': [

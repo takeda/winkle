@@ -49,7 +49,7 @@ class HAProxyTest(unittest.TestCase):
 					'defaults': ['aa', 'bb', 'cc'],
 					'services': [
 						'service-1',
-						{'service-2': {'rack-aware': True}}
+						{'service-2': {'rack-aware': True, 'minimum': 20}}
 					],
 					'extra': ['line 1', 'line 2']
 				}
@@ -101,53 +101,53 @@ class HAProxyTest(unittest.TestCase):
 		node9 = Node('9.9.9.9', '9999', 'node9', {'weight': '5.5%'}, [])
 
 		with self.subTest("empty node list"), mock.patch('winkle.haproxy.log') as log:
-			result = self.haproxy.calculate_weights([], False)
+			result = self.haproxy._calculate_weights([], False)
 			log.error.assert_called_with("There's not a single static weight; treating percentage weights as weights")
 			self.assertEqual(result, [])
 
 		with self.subTest("basic list with no weights no rack awareness"):
 			nodes = [node1, node2, node3]
-			result = self.haproxy.calculate_weights(nodes, False)
+			result = self.haproxy._calculate_weights(nodes, False)
 			self.assertEqual(result, [(node1, 10), (node2, 10), (node3, 10)])
 
 		with self.subTest("basic list with no weights with rack awareness"):
 			nodes = [node1, node2, node3]
-			result = self.haproxy.calculate_weights(nodes, True)
+			result = self.haproxy._calculate_weights(nodes, True)
 			self.assertEqual(result, [(node1, 10), (node2, 20), (node3, 10)])
 
 		with self.subTest("list with static weights"):
 			nodes = [node2, node4, node5]
-			result = self.haproxy.calculate_weights(nodes, True)
+			result = self.haproxy._calculate_weights(nodes, True)
 			self.assertEqual(result, [(node2, 20), (node4, 42), (node5, 24)])
 
 		with self.subTest("list with percentage weights"):
 			nodes = [node4, node6, node7]
-			result = self.haproxy.calculate_weights(nodes, True)
+			result = self.haproxy._calculate_weights(nodes, True)
 			self.assertEqual(result, [(node4, 42), (node6, 42), (node7, 84)])
 
 		with self.subTest("list with only percentage weights"), mock.patch('winkle.haproxy.log') as log:
 			nodes = [node6, node7]
-			result = self.haproxy.calculate_weights(nodes, True)
+			result = self.haproxy._calculate_weights(nodes, True)
 			log.error.assert_called_with("There's not a single static weight; treating percentage weights as weights")
 			self.assertEqual(result, [(node6, 25), (node7, 50)])
 
 		with self.subTest("percentage weights adds to more than 100%"), mock.patch('winkle.haproxy.log') as log:
 			nodes = [node1, node7, node7, node7]
-			result = self.haproxy.calculate_weights(nodes, True)
+			result = self.haproxy._calculate_weights(nodes, True)
 			log.error.assert_called_with("Sum of percentage weights is equal or higher than 100% (%f); treating "
 			                             "percentage weights as weights", 150.0)
 			self.assertEqual(result, [(node1, 10), (node7, 50), (node7, 50), (node7, 50)])
 
 		with self.subTest("fractional percentage (0.5%)"), mock.patch('winkle.haproxy.log') as log:
 			nodes = [node1, node4, node8]
-			result = self.haproxy.calculate_weights(nodes, False)
+			result = self.haproxy._calculate_weights(nodes, False)
 			log.warning.assert_called_with("%s's weight is calculated to %d; this node won't be receiving any traffic",
 				node8.name, 0)
 			self.assertEqual(result, [(node1, 10), (node4, 42), (node8, 0)])
 
 		with self.subTest("fractional percentage (5.5%)"):
 			nodes = [node1, node4, node9]
-			result = self.haproxy.calculate_weights(nodes, False)
+			result = self.haproxy._calculate_weights(nodes, False)
 			self.assertEqual(result, [(node1, 10), (node4, 42), (node9, 3)])
 
 	def test_config_generation(self):

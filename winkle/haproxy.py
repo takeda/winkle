@@ -1,11 +1,11 @@
 import logging
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, ChainMap
 from io import StringIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 
 from .abstract import AbsSink, T_SERVICES
-from .errors import ConfigError
+from .errors import ConfigError, ConstraintFailedError
 from .haproxy_comm import HAProxyComm
 from .types import node_random_sort_key, T_CHANGES, Node
 from .service_updater import ServiceUpdater
@@ -30,9 +30,8 @@ class HAProxy(AbsSink):
 	_sorting_key = node_random_sort_key
 
 	def __init__(self, config: Mapping[str, Any], services: Mapping[str, Any]):
-		super().__init__(config)
+		super().__init__('haproxy', config['sinks']['haproxy'])
 
-		self._config = config['sinks']['haproxy']  # type: Dict[str]
 		self._rack = config['program'].get('rack')
 		self._service_config = services
 		self._state_file = Path(self._config['service']['state-file'])
@@ -63,17 +62,22 @@ class HAProxy(AbsSink):
 					                  'a dash in yaml config?)')
 
 				name = list(service_name)[0]
-				self._services[name] = defaults
-				self._services[name].update(service_name[name])
+				self._services[name] = ChainMap(service_name[name], defaults)
 			else:
 				self._services[service_name] = defaults
 
 	def start(self) -> None:
 		for service_name, options in self._services.items():
-			source, service = self._hooks['service2source'](service_name, options.get('data-center'))
+			source, service = self.service2source(service_name, options.get('data-center'))
 			self._monitored_services[source].append(service)
 
 		self._initialized = True
+
+	def _is_safe_to_update(self):
+		for service, config in self._services.items():
+			nodes = self.service_nodes(service, config.get('data-center'))
+			if len(nodes) < config['minimum']:
+				raise ConstraintFailedError("%s has less than %d nodes (%r)" % (service, config['minimum'], nodes))
 
 	def _generate_config(self) -> bytes:
 		assert self._initialized
@@ -100,11 +104,11 @@ class HAProxy(AbsSink):
 			cnf.writelines(format(service_config['options']))
 			cnf.write("\n")
 
-			sorted_nodes = sorted(self._hooks['service_nodes'](service, config.get('data-center')),
+			sorted_nodes = sorted(self.service_nodes(service, config.get('data-center')),
 					key=self.__class__._sorting_key)
 
 			nodes = []
-			for node, weight in self.calculate_weights(sorted_nodes, config['rack-aware']):
+			for node, weight in self._calculate_weights(sorted_nodes, config['rack-aware']):
 				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
 				                                       service_config['server_options'],
 				                                       ' weight %s' % weight))
@@ -117,7 +121,7 @@ class HAProxy(AbsSink):
 
 		return cnf.getvalue().encode()
 
-	def calculate_weights(self, nodes: Iterable[Node], rack_aware: bool) -> List[Tuple[Node, int]]:
+	def _calculate_weights(self, nodes: Iterable[Node], rack_aware: bool) -> List[Tuple[Node, int]]:
 		def node_weight(node: Node) -> Tuple[bool, Union[int, float]]:
 			weight = node.attrs.get('weight')
 			if weight is None:
@@ -258,6 +262,8 @@ class HAProxy(AbsSink):
 
 	def process_update(self, source: str, changes: T_CHANGES) -> None:
 		assert self._initialized
+
+		self._is_safe_to_update()
 
 		running = self._service_updater.is_running()
 		if self._comm.has_socket():

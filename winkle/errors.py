@@ -1,4 +1,4 @@
-__all__ = ['Error', 'UnhandledException', 'ConnectionError', 'HTTPResponseError', 'ConfigError']
+__all__ = ['Error', 'UnhandledException', 'ConstraintFailedError', 'ConnectionError', 'HTTPResponseError', 'ConfigError']
 
 class Error(Exception):
 	pass
@@ -6,6 +6,8 @@ class Error(Exception):
 class UnhandledException(Error):
 	pass
 
+class ConstraintFailedError(Error):
+	pass
 
 # noinspection PyShadowingBuiltins
 class ConnectionError(Error):

@@ -20,13 +20,11 @@ class ConsulListener(AbsSource):
 	_local = threading.local()
 
 	def __init__(self, config):
-		super().__init__(config)
+		super().__init__('consul', config['sources']['consul'])
 
 		self._loop = None           # type: Optional[asyncio.BaseEventLoop]
 		self._listener_task = None  # type: Optional[threading.Thread]
 		self.__control_lock = threading.Lock()
-
-		self._config = config['sources']['consul']  # type: Mapping[str, Any]
 
 	def start(self) -> None:
 		assert self._hooks is not None
@@ -78,7 +76,7 @@ class ConsulListener(AbsSource):
 			consistency=self._config['consistency'])
 
 		# Services that we pay attention to
-		services = self._hooks['services_needed']('consul')  # type: List[str]
+		services = self.services_needed()
 
 		# Services which we use for monitoring (each supposed to have their own index)
 		monitored_services = self._get_monitor_services(services)
@@ -114,7 +112,7 @@ class ConsulListener(AbsSource):
 			if changed:
 				log.debug("Calculating differences in consul changes %s", [(name, value) for name, value in index.items()])
 				changes = await self._calculate_changes(services)
-				self._hooks['change_detected']('consul', changes)
+				self.change_detected(changes)
 			else:
 				log.debug("No changes detected")
 

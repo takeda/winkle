@@ -35,7 +35,7 @@ class Router:
 		}
 		sink_hooks = {
 			'service_nodes': self.sources.service_nodes,    # obtain list of healthy nodes for canonical service
-			'run_main_thread': self.run_main_thread,        # schedule task execution in main thread
+			'run_main_thread': self.run_main_thread,        # schedule task execution in the main thread
 			'service2source': self.service2source           # convert canonical service name to (source, service) tuple
 		}
 		self.sources.set_hooks(src_hooks)
@@ -77,7 +77,7 @@ class Router:
 
 	def run_main_thread(self, task: Callable[[], Any], *args: List[Any], **kwargs: Dict[str, Any]):
 		"""
-		Run function in main thread and returns Future.
+		Run function in the main thread and returns Future.
 		:param task: function to call
 		:param args: arguments to the function
 		:param kwargs: keyword arguments to the function

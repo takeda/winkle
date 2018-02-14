@@ -1,15 +1,11 @@
 import collections
-from typing import Dict
+import hashlib
+import socket
+import struct
 
-class hashabledict(dict):
-	def __hash__(self) -> int:
-		return hash(tuple(sorted(self.items())))
+from .types import Node
 
-	def __eq__(self, other: Dict) -> bool:
-		if not isinstance(other, self.__class__):
-			return False
-
-		return tuple(sorted(self.items())) == tuple(sorted(other.items()))
+SORTING_SALT = socket.getfqdn().encode('us-ascii', 'ignore')
 
 def mergedict(d1, d2):
 	for key, new in d2.items():
@@ -18,3 +14,20 @@ def mergedict(d1, d2):
 			mergedict(old, new)
 		else:
 			d1[key] = new
+
+def node_random_sort_key(node: Node) -> str:
+	global SORTING_SALT
+
+	# md5 is fast and evenly distributed, collision weakness has no impact in this use case
+	digest = hashlib.md5()
+	digest.update(SORTING_SALT)
+	digest.update(('%s:%s' % (node[0], node[1])).encode('us-ascii', 'ignore'))
+
+	return digest.hexdigest()
+
+def node_server_id(node: Node) -> int:
+	digest = hashlib.md5()
+	digest.update(('%s:%s' % (node[0], node[1])).encode('us-ascii', 'ignore'))
+
+	# haproxy expects signed 32 bit integer > 0
+	return abs(struct.unpack('@i', digest.digest()[:4])[0]) or 1

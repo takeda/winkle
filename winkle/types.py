@@ -1,8 +1,14 @@
-import hashlib
-import socket
 from typing import Dict, FrozenSet, NamedTuple, Any
 
-from .utils import hashabledict
+class hashabledict(dict):
+	def __hash__(self) -> int:
+		return hash(tuple(sorted(self.items())))
+
+	def __eq__(self, other: Dict) -> bool:
+		if not isinstance(other, self.__class__):
+			return False
+
+		return tuple(sorted(self.items())) == tuple(sorted(other.items()))
 
 Node = NamedTuple('Node', (
 	('address', str),
@@ -47,14 +53,3 @@ class NodeAddr:
 	def __repr__(self):
 		return self.node.__repr__()
 
-sorting_salt = socket.getfqdn().encode('us-ascii', 'ignore')
-
-def node_random_sort_key(node: Node) -> str:
-	global sorting_salt
-
-	# md5 is fast and evenly distributed, collision weakness has no impact in this use case
-	digest = hashlib.md5()
-	digest.update(sorting_salt)
-	digest.update(('%s:%s' % (node[0], node[1])).encode('us-ascii', 'ignore'))
-
-	return digest.hexdigest()

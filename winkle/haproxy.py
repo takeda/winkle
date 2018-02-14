@@ -7,7 +7,8 @@ from typing import Any, Dict, Iterable, List, Mapping, Tuple, Union
 from .abstract import AbsSink, T_SERVICES
 from .errors import ConfigError, ConstraintFailedError
 from .haproxy_comm import HAProxyComm
-from .types import node_random_sort_key, T_CHANGES, Node
+from .types import T_CHANGES, Node
+from .utils import node_random_sort_key, node_server_id
 from .service_updater import ServiceUpdater
 
 T_SERVICES_CONFIG = Dict[str, Dict[str, Any]]
@@ -28,6 +29,7 @@ STATS_CONFIG = [
 
 class HAProxy(AbsSink):
 	_sorting_key = node_random_sort_key
+	_server_id = node_server_id
 
 	def __init__(self, config: Mapping[str, Any], services: Mapping[str, Any]):
 		super().__init__('haproxy', config['sinks']['haproxy'])
@@ -109,9 +111,9 @@ class HAProxy(AbsSink):
 
 			nodes = []
 			for node, weight in self._calculate_weights(sorted_nodes, config['rack-aware']):
-				nodes.append('server %s %s:%s %s%s' % (node.name, node.address, node.port,
-				                                       service_config['server_options'],
-				                                       ' weight %s' % weight))
+				nodes.append('server %s %s:%s id %d %s%s' % (node.name, node.address, node.port,
+					self.__class__._server_id(node), service_config['server_options'],
+					' weight %s' % weight))
 
 			cnf.writelines(format(nodes))
 

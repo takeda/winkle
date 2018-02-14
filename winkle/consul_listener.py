@@ -3,15 +3,14 @@ import logging
 import threading
 from asyncio import CancelledError, ensure_future
 from contextlib import closing
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from warnings import warn
 
 from .abstract import AbsSource
 # from .caching import async_ttl_cache
 from .consul import Consul
 from .errors import ConnectionError, HTTPResponseError
-from .types import Node, NodeAddr, T_CHANGES, Changes
-from .utils import hashabledict
+from .types import hashabledict, Node, NodeAddr, T_CHANGES, Changes
 
 log = logging.getLogger(__name__)
 

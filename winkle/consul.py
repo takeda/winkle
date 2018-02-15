@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import urllib.parse
 from enum import Enum
@@ -36,9 +37,9 @@ class Consul:
 			consistency = self._consistency
 
 		if consistency == Consistency.Consistent:
-			params.update({'Consistent': True})
+			params.update({'Consistent': 'true'})
 		elif consistency == Consistency.Stale:
-			params.update({'Stale': True})
+			params.update({'Stale': 'true'})
 
 	@staticmethod
 	def blocking(params: dict, index: Optional[str], wait: Optional[str]) -> None:
@@ -64,7 +65,7 @@ class Consul:
 
 		return dc_service[0], dc_service[1]
 
-	async def get(self, path: str, params: Optional[dict]=None) -> Tuple[aiohttp.HttpMessage, Mapping[str, Any]]:
+	async def get(self, path: str, params: Optional[dict]=None) -> Tuple[Mapping[str, str], Mapping[str, Any]]:
 		"""
 		Makes a get request to consul and returns headers and json response
 		:param path: path for the request
@@ -78,7 +79,7 @@ class Consul:
 		url = urllib.parse.urljoin(self._base_url, path)
 
 		try:
-			async with self._session.get(url, params=params) as resp:  # type: aiohttp.client_reqrep.ClientResponse
+			async with self._session.get(url, params=params, timeout=330) as resp:  # type: aiohttp.client_reqrep.ClientResponse
 				if resp.status != 200:
 					raise HTTPResponseError(resp.status, resp.reason, await resp.text())
 
@@ -87,7 +88,7 @@ class Consul:
 
 				return resp.headers, await resp.json()
 
-		except (aiohttp.errors.ClientResponseError, aiohttp.errors.ClientOSError) as e:
+		except (aiohttp.ClientResponseError, aiohttp.ClientOSError, aiohttp.client_exceptions.ServerDisconnectedError, asyncio.TimeoutError) as e:
 			raise ConnectionError(e) from e
 		except Error:
 			raise
@@ -115,7 +116,7 @@ class Health:
 		self._agent.consistency(params, consistency)
 		self._agent.blocking(params, index, wait)
 		if passing:
-			params['passing'] = True
+			params['passing'] = 'true'
 
 		path = urllib.parse.urljoin('/v1/health/service/', urllib.parse.quote(service))
 

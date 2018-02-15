@@ -1,42 +1,44 @@
 import logging.config
 import sys
+from argparse import ArgumentParser
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Mapping
 
-import click
 import yamlcfg
 
 from winkle import daemon, defaults
 from winkle.router import Router
 from winkle.utils import mergedict
 
-class UserGroupParam(click.ParamType):
-	name = 'user:group'
+def user_group_param(value):
+	values = value.split(':')
 
-	def convert(self, value, param, ctx):
-		values = value.split(':')
-		user = values[0]
-		group = values[1] if len(values) > 0 else None
+	user = values[0]
+	group = values[1] if len(values) > 0 else None
 
-		return user, group
+	return user, group
 
-USERGROUP = UserGroupParam()
+def main():
+	parser = ArgumentParser()
+	parser.add_argument('--install', action='store_true', help='install service')
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument('--foreground', '-f', action='store_true', help='run in foreground and log to console')
+	group.add_argument('--background', action='store_true')
+	parser.add_argument('--config', '-c', default='/etc/winkle/winkle.yaml', type=str, help='configuration file', metavar='FILE')
+	parser.add_argument('--pid-file', '-p', type=str, help='PID file', metavar='FILE')
+	parser.add_argument('--log-file', '-l', type=str, help='log file', metavar='FILE')
+	parser.add_argument('--user', '-u', type=user_group_param, help='user and group', metavar='USER:GROUP')
+	parser.add_argument('--version', '-v', action='version', version='%(prog)s 1.5')
 
-@click.command()
-@click.option('--install', is_flag=True, default=False, help='Install service')
-@click.option('--foreground/--background', '-f', default=False, help='Run in foreground and log to console')
-@click.option('--config', '-c', type=str, default='/etc/winkle/winkle.yaml', help='Configuration file')
-@click.option('--pid-file', '-p', type=str, help='PID file')
-@click.option('--log-file', '-l', type=str, help='Log file')
-@click.option('--user', '-u', type=USERGROUP, help='User and group')
-@click.version_option()
-def main(install: bool, foreground: bool, config: str, pid_file: str, log_file: str, user: tuple):
+	args = parser.parse_args()
+	foreground = args.foreground and not args.background
+
 	# Get default config
 	computed_config = deepcopy(defaults.default_config)
 
 	# Marge it with user config
-	yaml_config = yamlcfg.YAMLConfig(paths=[config])._data
+	yaml_config = yamlcfg.YAMLConfig(paths=[args.config])._data
 	mergedict(computed_config, yaml_config)
 
 	# Merge it with config in configuration directory
@@ -47,15 +49,15 @@ def main(install: bool, foreground: bool, config: str, pid_file: str, log_file: 
 			mergedict(computed_config, yaml_config)
 
 	# Override config with command line options
-	if pid_file:
-		computed_config['program']['pid-file'] = pid_file
-	if log_file:
-		computed_config['program']['log-gile'] = log_file
-	if user:
-		computed_config['program']['user'] = user[0]
-		computed_config['program']['group'] = user[1]
+	if args.pid_file:
+		computed_config['program']['pid-file'] = args.pid_file
+	if args.log_file:
+		computed_config['program']['log-file'] = args.log_file
+	if args.user:
+		computed_config['program']['user'] = args.user[0]
+		computed_config['program']['group'] = args.user[1]
 
-	if install:
+	if args.install:
 		daemon.install(computed_config)
 		sys.exit()
 

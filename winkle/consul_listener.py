@@ -37,7 +37,15 @@ class ConsulListener(AbsSource):
 				with self.__control_lock:
 					self._loop = loop
 
-				loop.run_until_complete(self._monitor())
+				while True:
+					# noinspection PyBroadException
+					try:
+						loop.run_until_complete(self._monitor())
+					except:
+						log.exception("Unhandled exception in the consul thread (THIS IS A BUG, PLEASE REPORT);"
+						              "restarting asyncio monitor ...")
+					else:
+						break
 
 		with self.__control_lock:
 			if self._listener_task:

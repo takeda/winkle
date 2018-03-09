@@ -1,0 +1,54 @@
+cs-riak-suanpan-pb:
+  discovery:
+    method: consul
+    service: riak-suanpan-pb
+  haproxy:
+    options:
+      - bind *:3200
+      - mode tcp
+      - balance leastconn
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4
+
+riak-quality-http:
+  discovery:
+    method: consul
+    service: riak-quality-http
+  haproxy:
+    options:
+      - bind *:3201
+      - mode http
+      - balance roundrobin
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7
+
+cs-ads-thrift:
+  discovery:
+    method: consul
+    service: ads-thrift
+  haproxy:
+    options:
+      - bind *:3202
+      - mode tcp
+      - balance leastconn
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4
+
+gateway-http:
+  discovery:
+    method: consul
+    service: gateway-http
+  haproxy:
+    options:
+      - bind *:3203
+      - mode http
+      - balance roundrobin
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer7
+
+frequency-thrift:
+  discovery:
+    method: consul
+    service: frequency-thrift
+  haproxy:
+    options:
+      - bind *:3204
+      - mode tcp
+      - balance leastconn
+    server_options: check inter 10s rise 3 fall 2 slowstart 1m observe layer4

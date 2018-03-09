@@ -1,9 +1,13 @@
 /.coverage
 /.idea/
-/.py35/
+/py36/
 /build/
 /dist/
 /services
 /config.d/
 /winkle.egg-info/
+/requirements_frozen.txt
+/cde/haproxy.cfg
+/cde/.consul/
+/cde/consul.log
 __pycache__

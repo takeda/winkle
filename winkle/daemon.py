@@ -8,7 +8,6 @@ import string
 import subprocess
 import socket
 import sys
-# import time
 
 # from contextlib import closing
 from typing import Callable, Optional

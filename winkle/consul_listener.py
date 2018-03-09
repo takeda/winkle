@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 from warnings import warn
 
 from .abstract import AbsSource
-# from .caching import async_ttl_cache
 from .consul import Consul
 from .errors import ConnectionError, HTTPResponseError
 from .types import hashabledict, Node, NodeAddr, T_CHANGES, Changes

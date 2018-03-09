@@ -1,0 +1,63 @@
+#! /bin/sh
+
+CONSUL_CONF=${CDE_HOME}/consul.conf
+CONSUL_DATA=${CDE_HOME}/.consul
+CONSUL_PID=${CDE_HOME}/.consul.pid
+CONSUL_LOG=${CDE_HOME}/consul.log
+HAPROXY_PID=${CDE_HOME}/.haproxy.pid
+
+first_consul_server () {
+	python -c 'import json, sys; print(json.load(sys.stdin)["start_join"][0])' < ${CONSUL_CONF}
+}
+
+my_ip () {
+	route get $1 | awk '/interface/ {print $2; exit}' | xargs ifconfig | awk '/inet / {print $2; exit}'
+}
+
+consul_start () {
+	consul agent -bind $(my_ip $(first_consul_server)) -config-file=${CONSUL_CONF} -data-dir=${CONSUL_DATA} -pid-file=${CONSUL_PID} 2>&1 >${CONSUL_LOG} &
+}
+
+consul_stop () {
+	if is_consul_running; then
+		kill $(cat ${CONSUL_PID})
+	fi
+}
+
+is_consul_running () {
+	if [ ! -r ${CONSUL_PID} ]; then
+		return 1
+	fi
+
+	kill -20 $(cat ${CONSUL_PID}) 2> /dev/null
+	if [ $? -ne 0 ]; then
+		echo "Consul is dead, removing stale pid file..."
+		rm -f ${CONSUL_PID}
+	fi
+	return 0
+}
+
+consul_log () {
+	tail -f ${CONSUL_LOG}
+}
+
+haproxy_stop () {
+	if is_haproxy_running; then
+		kill $(cat ${HAPROXY_PID})
+	fi
+}
+
+is_haproxy_running () {
+	if [ ! -r ${HAPROXY_PID} ]; then
+		return 1
+	fi
+
+	kill -20 $(cat ${HAPROXY_PID}) 2> /dev/null
+	if [ $? -ne 0 ]; then
+		echo "Haproxy is dead, removing stale pid file..."
+		rm -f ${HAPROXY_PID}
+	fi
+	return 0
+}
+
+$1

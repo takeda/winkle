@@ -1,0 +1,8 @@
+sinks:
+  haproxy:
+    services:
+      - cs-riak-suanpan-pb
+      - cs-ads-thrift:
+          data-center: xv-qa
+      - riak-quality-http:
+          minimum: 2

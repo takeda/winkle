@@ -1,11 +1,10 @@
-aiohttp==3.0.1
+aiohttp==3.0.7
 async-timeout==2.0.0
 attrs==17.4.0
-cachetools==2.0.1
 chardet==3.0.4
 idna==2.6
-idna-ssl==1.0.0
+idna-ssl==1.0.1
 multidict==4.1.0
 PyYAML==3.12
 yamlcfg==0.5.3
-yarl==1.1.0
+yarl==1.1.1

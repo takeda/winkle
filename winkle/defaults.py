@@ -6,7 +6,8 @@ default_config = {
 		'user': 'winkle',
 		'group': 'winkle',
 		'log-file': '/var/log/winkle/winkle.log',
-		'pid-file': '/var/run/winkle/winkle.pid'
+		'pid-file': '/var/run/winkle/winkle.pid',
+		'foreground': False
 	},
 	'sources': {
 		'consul': {

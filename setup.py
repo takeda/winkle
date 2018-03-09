@@ -2,8 +2,9 @@
 
 import os
 from setuptools import setup
+from winkle.version import version
 
-def version(v):
+def go_version(v):
 	if 'GO_PIPELINE_LABEL' in os.environ:
 		go_v = os.environ['GO_PIPELINE_LABEL'].split('.')
 		return '%s+%s.%s' % (v, go_v[0], go_v[1])
@@ -12,8 +13,8 @@ def version(v):
 
 setup(
 	name = 'winkle',
-	version = version('2.0'),
-	install_requires = ['aiohttp ~= 3.0.1', 'cachetools ~= 2.0.1', 'yamlcfg ~= 0.5.3'],
+	version = go_version(version),
+	install_requires = ['aiohttp ~= 3.0.1', 'yamlcfg ~= 0.5.3'],
 	entry_points = {
 		'console_scripts': [
 			'winkle = winkle.main:main'

@@ -17,8 +17,7 @@ in python.mkDerivation {
 		export CDE_HOME=$(pwd)/cde
 		cd $CDE_HOME
 		function finish {
-			make haproxy-stop
-			make consul-stop
+			make clean
 		}
 		trap finish EXIT
 		make consul-start

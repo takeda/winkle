@@ -10,4 +10,5 @@
 /cde/haproxy.cfg
 /cde/.consul/
 /cde/consul.log
+/cde/.haproxy.pid
 __pycache__

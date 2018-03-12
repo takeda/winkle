@@ -12,7 +12,7 @@ sinks:
       config: haproxy.cfg
       pid-file: .haproxy.pid
       check-config: haproxy -c -f {config}
-      status: kill -20 $(cat {pidfile})
+      status: kill -20 $(cat {pidfile} 2>/dev/null) 2>/dev/null
       start: haproxy -D -f {config} -p {pidfile}
       reload: haproxy -D -f {config} -p {pidfile} -sf $(cat {pidfile})
       socket: /tmp/haproxy.sock

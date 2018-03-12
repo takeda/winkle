@@ -262,6 +262,23 @@ class HAProxy(AbsSink):
 
 		return reload
 
+	def _save_state(self):
+		if self._comm.has_socket():
+			log.info("Writing state file to %s", self._state_file)
+			self._comm.save_state(self._state_file)
+
+	def _clear_state(self):
+		if self._comm.has_socket():
+			log.info("Clearing state file: %s", self._state_file)
+			with self._state_file.open("w") as f:
+				f.write('1\n')
+
+	def _wipe_state(self):
+		if self._comm.has_socket():
+			log.info("Wiping state file: %s", self._state_file)
+			if self._state_file.exists():
+				self._state_file.unlink()
+
 	def process_update(self, source: str, changes: T_CHANGES) -> None:
 		assert self._initialized
 
@@ -287,18 +304,14 @@ class HAProxy(AbsSink):
 			log.info("HAProxy is not running; starting the service")
 
 			# State file existing at this point is invalid
-			if self._state_file.exists():
-				self._state_file.unlink()
+			self._clear_state()
 
 			self._service_updater.start()
 		elif reload:
-			if self._comm.has_socket():
-				log.info("Writing state file to %s", self._state_file)
-				self._comm.save_state(self._state_file)
+			self._save_state()
 
 			log.info("Reloading haproxy")
 			self._service_updater.reload()
 
 			# Remove state file after reload
-			if self._state_file.exists():
-				self._state_file.unlink()
+			self._clear_state()

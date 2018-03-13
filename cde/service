@@ -10,8 +10,16 @@ first_consul_server () {
 	python -c 'import json, sys; print(json.load(sys.stdin)["start_join"][0])' < ${CONSUL_CONF}
 }
 
+outside_if () {
+	if which ip > /dev/null; then
+		ip route get $1 | awk '/dev/ {print $5; exit}'
+	else
+		route get $1 | awk '/interface/ {print $2; exit}'
+	fi
+}
+
 my_ip () {
-	route get $1 | awk '/interface/ {print $2; exit}' | xargs ifconfig | awk '/inet / {print $2; exit}'
+	outside_if $1 | xargs ifconfig | awk '/inet / {print $2; exit}'
 }
 
 consul_start () {

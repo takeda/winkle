@@ -38,10 +38,10 @@ class AbsSink(AbsSourceSink):
 	def process_update(self, source: str, changes: T_CHANGES) -> None:
 		pass
 
-	def service_nodes(self, service_name: str, data_center: Optional[str]) -> List[Node]:
+	def service_nodes(self, service_name: str, data_centers: Optional[str]) -> List[Node]:
 		assert self._hooks, 'set_hooks() was not called'
-		return self._hooks['service_nodes'](service_name, data_center)
+		return self._hooks['service_nodes'](service_name, data_centers)
 
-	def service2source(self, canonical_service: str, data_center: Optional[str]) -> Tuple[str, str]:
+	def service2sources(self, canonical_service: str, data_centers: Optional[str]) -> Tuple[str, List[str]]:
 		assert self._hooks, 'set_hooks() was not called'
-		return self._hooks['service2source'](canonical_service, data_center)
+		return self._hooks['service2sources'](canonical_service, data_centers)

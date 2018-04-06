@@ -18,9 +18,9 @@ class Sources:
 	def stop(self):
 		pass
 
-	def service_nodes(self, service_name: str, data_center: Optional[str]) -> List[Node]:
-		source, service = self._hooks['service2source'](service_name, data_center)
+	def service_nodes(self, service_name: str, data_centers: Optional[str]) -> List[Node]:
+		source, services = self._hooks['service2sources'](service_name, data_centers)
 		if source == 'consul':
-			return self.consul.service_nodes(service)
+			return [ n for service in services for n in self.consul.service_nodes(service) ]
 
 		raise NotImplemented()

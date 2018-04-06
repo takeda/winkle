@@ -12,3 +12,10 @@
 /cde/consul.log
 /cde/.haproxy.pid
 __pycache__
+/bin
+/lib
+/lib64
+/pip.conf
+/pyvenv.cfg
+*.pyc
+/pip-selfcheck.json

@@ -19,10 +19,10 @@ def service_nodes(service, datacenter):
 		]
 	}[service]
 
-def service2source(name, datacenter):
+def service2sources(name, datacenter):
 	return {
-		'service-1': ('consul', 'consul-service-1'),
-		'service-2': ('marathon', 'marathon-service-1')
+		'service-1': ('consul', ['consul-service-1']),
+		'service-2': ('marathon', ['marathon-service-1'])
 	}[name]
 
 class HAProxyTest(unittest.TestCase):
@@ -81,7 +81,7 @@ class HAProxyTest(unittest.TestCase):
 
 		hooks = {
 			'service_nodes': service_nodes,
-			'service2source': service2source
+			'service2sources': service2sources
 		}
 
 		HAProxy._sorting_key = None

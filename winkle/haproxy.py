@@ -70,8 +70,8 @@ class HAProxy(AbsSink):
 
 	def start(self) -> None:
 		for service_name, options in self._services.items():
-			source, service = self.service2source(service_name, options.get('data-center'))
-			self._monitored_services[source].append(service)
+			source, services = self.service2sources(service_name, options.get('data-center'))
+			self._monitored_services[source] += services
 
 		self._initialized = True
 

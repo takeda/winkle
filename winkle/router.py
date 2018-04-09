@@ -30,13 +30,13 @@ class Router:
 		src_hooks = {
 			'services_needed': self.sinks.services_needed,  # obtain service list for given source
 			'change_detected': self.sinks.change_detected,  # notify sink about a change
-			'service2source': self.service2source,          # convert canonical service name to (source, service) tuple
+			'service2sources': self.service2sources,        # convert canonical service name to (source, services) tuple
 			'source2service': self.source2service           # convert source, service pair into canonical service name
 		}
 		sink_hooks = {
 			'service_nodes': self.sources.service_nodes,    # obtain list of healthy nodes for canonical service
 			'run_main_thread': self.run_main_thread,        # schedule task execution in the main thread
-			'service2source': self.service2source           # convert canonical service name to (source, service) tuple
+			'service2sources': self.service2sources         # convert canonical service name to (source, services) tuple
 		}
 		self.sources.set_hooks(src_hooks)
 		self.sinks.set_hooks(sink_hooks)
@@ -95,20 +95,22 @@ class Router:
 		with self.__control_lock:
 			return asyncio.run_coroutine_threadsafe(coroutine(), self._loop)
 
-	def service2source(self, canonical_service: str, data_center: Optional[str]) -> Tuple[str, str]:
+	def service2sources(self, canonical_service: str, data_centers: Optional[str]) -> Tuple[str, List[str]]:
 		"""
 		Convert canonical service name to (source, service) tuple.
 		:param canonical_service: name of the service
 		:param data_center: data center where the service is located or None if the same
-		:return: source, service tuple
+		:return: source, services tuple
 		"""
 
 		# TODO: this should be relocated once we get a better idea when we support more sources
 		source, service = self._service2source[canonical_service]
-		if data_center:
-			service = "%s/%s" % (data_center, service)
+		if data_centers:
+			services = [ "%s/%s" % (dc, service) for dc in data_centers.split(' ') ]
+		else:
+			services = [ service ]
 
-		return source, service
+		return source, services
 
 	def source2service(self, source: str, service: str) -> str:
 		dc_service = service.split('/')
